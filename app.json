@@ -44,7 +44,7 @@
       "router": {},
       "backendUrl": "https://6nvn8nzjrnmvyerqaxcfseztdgcaxr4y.app.specular.dev",
       "supabaseUrl": "https://loazwwkypjxikuwvsirk.supabase.co",
-      "supabaseAnonKey": "YOUR_SUPABASE_ANON_KEY"
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxvYXp3d2t5cGp4aWt1d3ZzaXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA0OTY2NDYsImV4cCI6MjA4NjA3MjY0Nn0.asm7fGcOUnNaqGwjvxV-8GlIyTl3WKRvZ52nOrZAiyQ"
     }
   }
 }
