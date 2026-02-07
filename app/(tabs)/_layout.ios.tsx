@@ -1,14 +1,10 @@
 
 import React from 'react';
 import { Stack } from 'expo-router';
-import { useAuth } from '@/contexts/AuthContext';
-import { Redirect } from 'expo-router';
 import FloatingTabBar from '@/components/FloatingTabBar';
 import { Href } from 'expo-router';
 
 export default function TabLayout() {
-  const { loading, user } = useAuth();
-
   const tabs = [
     {
       name: 'home',
@@ -35,11 +31,6 @@ export default function TabLayout() {
       icon: 'person' as const,
     },
   ];
-
-  // Show loading state while checking auth
-  if (loading) {
-    return null;
-  }
 
   return (
     <>
