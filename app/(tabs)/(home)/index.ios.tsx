@@ -24,7 +24,7 @@ export default function HomeScreen() {
 
   const loadData = async () => {
     if (!isSupabaseConfigured) {
-      console.log('Supabase not configured');
+      console.log('Supabase not configured - showing demo mode');
       setLoading(false);
       return;
     }
@@ -75,25 +75,6 @@ export default function HomeScreen() {
     router.push(`/service/${serviceId}`);
   };
 
-  if (!isSupabaseConfigured) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <IconSymbol
-            ios_icon_name="exclamationmark.triangle.fill"
-            android_material_icon_name="warning"
-            size={64}
-            color={colors.warning}
-          />
-          <Text style={styles.errorTitle}>Supabase Not Configured</Text>
-          <Text style={styles.errorText}>
-            Please set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in your environment variables.
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -101,6 +82,109 @@ export default function HomeScreen() {
           <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  // Show setup instructions if Supabase is not configured
+  if (!isSupabaseConfigured) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.setupContainer}>
+          <IconSymbol
+            ios_icon_name="wrench.and.screwdriver.fill"
+            android_material_icon_name="build"
+            size={80}
+            color={colors.primary}
+          />
+          <Text style={styles.setupTitle}>Welcome to HUB SPECIALIST</Text>
+          <Text style={styles.setupSubtitle}>A Services Marketplace</Text>
+          
+          <View style={styles.setupCard}>
+            <Text style={styles.setupCardTitle}>Setup Required</Text>
+            <Text style={styles.setupCardText}>
+              To get started, you need to configure your Supabase database:
+            </Text>
+            
+            <View style={styles.setupSteps}>
+              <View style={styles.setupStep}>
+                <View style={styles.stepNumber}>
+                  <Text style={styles.stepNumberText}>1</Text>
+                </View>
+                <Text style={styles.stepText}>Create a Supabase project at supabase.com</Text>
+              </View>
+              
+              <View style={styles.setupStep}>
+                <View style={styles.stepNumber}>
+                  <Text style={styles.stepNumberText}>2</Text>
+                </View>
+                <Text style={styles.stepText}>Run the SQL setup from SUPABASE_SETUP.md</Text>
+              </View>
+              
+              <View style={styles.setupStep}>
+                <View style={styles.stepNumber}>
+                  <Text style={styles.stepNumberText}>3</Text>
+                </View>
+                <Text style={styles.stepText}>Add your credentials to app.json under "extra"</Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.featuresCard}>
+            <Text style={styles.featuresTitle}>What you&apos;ll get:</Text>
+            <View style={styles.featuresList}>
+              <View style={styles.featureItem}>
+                <IconSymbol
+                  ios_icon_name="checkmark.circle.fill"
+                  android_material_icon_name="check-circle"
+                  size={24}
+                  color={colors.success}
+                />
+                <Text style={styles.featureText}>Browse services by category</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <IconSymbol
+                  ios_icon_name="checkmark.circle.fill"
+                  android_material_icon_name="check-circle"
+                  size={24}
+                  color={colors.success}
+                />
+                <Text style={styles.featureText}>Book appointments with specialists</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <IconSymbol
+                  ios_icon_name="checkmark.circle.fill"
+                  android_material_icon_name="check-circle"
+                  size={24}
+                  color={colors.success}
+                />
+                <Text style={styles.featureText}>Track your orders in real-time</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <IconSymbol
+                  ios_icon_name="checkmark.circle.fill"
+                  android_material_icon_name="check-circle"
+                  size={24}
+                  color={colors.success}
+                />
+                <Text style={styles.featureText}>Manage your profile and services</Text>
+              </View>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.docsButton}
+            onPress={() => console.log('User wants to view documentation')}
+          >
+            <IconSymbol
+              ios_icon_name="doc.text.fill"
+              android_material_icon_name="description"
+              size={20}
+              color="#FFFFFF"
+            />
+            <Text style={styles.docsButtonText}>View Setup Documentation</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -162,13 +246,14 @@ export default function HomeScreen() {
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
               {categories.map((category, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.categoryCard}
-                  onPress={() => handleCategoryPress(category.id)}
-                >
-                  <Text style={styles.categoryName}>{category.name}</Text>
-                </TouchableOpacity>
+                <React.Fragment key={index}>
+                  <TouchableOpacity
+                    style={styles.categoryCard}
+                    onPress={() => handleCategoryPress(category.id)}
+                  >
+                    <Text style={styles.categoryName}>{category.name}</Text>
+                  </TouchableOpacity>
+                </React.Fragment>
               ))}
             </ScrollView>
           )}
@@ -187,48 +272,49 @@ export default function HomeScreen() {
                 const ratingText = service.rating_count > 0 ? `${service.rating_avg.toFixed(1)} (${service.rating_count})` : 'No ratings';
 
                 return (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.serviceCard}
-                    onPress={() => handleServicePress(service.id)}
-                  >
-                    <View style={styles.serviceHeader}>
-                      <Text style={styles.serviceTitle}>{service.title}</Text>
-                      <Text style={styles.servicePrice}>{priceText}</Text>
-                    </View>
-                    <Text style={styles.serviceDescription} numberOfLines={2}>
-                      {service.description}
-                    </Text>
-                    <View style={styles.serviceFooter}>
-                      <View style={styles.serviceInfo}>
-                        <IconSymbol
-                          ios_icon_name="person.fill"
-                          android_material_icon_name="person"
-                          size={16}
-                          color={colors.textSecondary}
-                        />
-                        <Text style={styles.serviceInfoText}>{specialistName}</Text>
+                  <React.Fragment key={index}>
+                    <TouchableOpacity
+                      style={styles.serviceCard}
+                      onPress={() => handleServicePress(service.id)}
+                    >
+                      <View style={styles.serviceHeader}>
+                        <Text style={styles.serviceTitle}>{service.title}</Text>
+                        <Text style={styles.servicePrice}>{priceText}</Text>
                       </View>
-                      <View style={styles.serviceInfo}>
-                        <IconSymbol
-                          ios_icon_name="tag.fill"
-                          android_material_icon_name="label"
-                          size={16}
-                          color={colors.textSecondary}
-                        />
-                        <Text style={styles.serviceInfoText}>{categoryName}</Text>
+                      <Text style={styles.serviceDescription} numberOfLines={2}>
+                        {service.description}
+                      </Text>
+                      <View style={styles.serviceFooter}>
+                        <View style={styles.serviceInfo}>
+                          <IconSymbol
+                            ios_icon_name="person.fill"
+                            android_material_icon_name="person"
+                            size={16}
+                            color={colors.textSecondary}
+                          />
+                          <Text style={styles.serviceInfoText}>{specialistName}</Text>
+                        </View>
+                        <View style={styles.serviceInfo}>
+                          <IconSymbol
+                            ios_icon_name="tag.fill"
+                            android_material_icon_name="label"
+                            size={16}
+                            color={colors.textSecondary}
+                          />
+                          <Text style={styles.serviceInfoText}>{categoryName}</Text>
+                        </View>
+                        <View style={styles.serviceInfo}>
+                          <IconSymbol
+                            ios_icon_name="star.fill"
+                            android_material_icon_name="star"
+                            size={16}
+                            color={colors.warning}
+                          />
+                          <Text style={styles.serviceInfoText}>{ratingText}</Text>
+                        </View>
                       </View>
-                      <View style={styles.serviceInfo}>
-                        <IconSymbol
-                          ios_icon_name="star.fill"
-                          android_material_icon_name="star"
-                          size={16}
-                          color={colors.warning}
-                        />
-                        <Text style={styles.serviceInfoText}>{ratingText}</Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+                  </React.Fragment>
                 );
               })}
             </React.Fragment>
@@ -259,20 +345,105 @@ const styles = StyleSheet.create({
     ...typography.body,
     color: colors.textSecondary,
   },
-  errorContainer: {
-    flex: 1,
+  setupContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  setupTitle: {
+    ...typography.h1,
+    marginTop: spacing.lg,
+    textAlign: 'center',
+  },
+  setupSubtitle: {
+    ...typography.h3,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    marginBottom: spacing.xl,
+    textAlign: 'center',
+  },
+  setupCard: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    width: '100%',
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  setupCardTitle: {
+    ...typography.h2,
+    marginBottom: spacing.md,
+  },
+  setupCardText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+  },
+  setupSteps: {
+    gap: spacing.md,
+  },
+  setupStep: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.md,
+  },
+  stepNumber: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.xl,
   },
-  errorTitle: {
-    ...typography.h2,
-    marginTop: spacing.lg,
-    marginBottom: spacing.sm,
+  stepNumberText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
-  errorText: {
-    ...typography.bodySecondary,
-    textAlign: 'center',
+  stepText: {
+    ...typography.body,
+    flex: 1,
+    paddingTop: 4,
+  },
+  featuresCard: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    width: '100%',
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  featuresTitle: {
+    ...typography.h3,
+    marginBottom: spacing.md,
+  },
+  featuresList: {
+    gap: spacing.md,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  featureText: {
+    ...typography.body,
+    flex: 1,
+  },
+  docsButton: {
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+  },
+  docsButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   header: {
     padding: spacing.lg,

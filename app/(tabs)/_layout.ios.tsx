@@ -1,17 +1,55 @@
+
 import React from 'react';
-import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
+import { Stack } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import { Redirect } from 'expo-router';
+import FloatingTabBar from '@/components/FloatingTabBar';
+import { Href } from 'expo-router';
 
 export default function TabLayout() {
+  const { loading, user } = useAuth();
+
+  const tabs = [
+    {
+      name: 'home',
+      route: '/(tabs)/(home)' as Href,
+      label: 'Home',
+      icon: 'home' as const,
+    },
+    {
+      name: 'services',
+      route: '/(tabs)/services' as Href,
+      label: 'Services',
+      icon: 'work' as const,
+    },
+    {
+      name: 'orders',
+      route: '/(tabs)/orders' as Href,
+      label: 'Orders',
+      icon: 'receipt' as const,
+    },
+    {
+      name: 'profile',
+      route: '/(tabs)/profile' as Href,
+      label: 'Profile',
+      icon: 'person' as const,
+    },
+  ];
+
+  // Show loading state while checking auth
+  if (loading) {
+    return null;
+  }
+
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger key="home" name="(home)">
-        <Icon sf="house.fill" />
-        <Label>Home</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger key="profile" name="profile">
-        <Icon sf="person.fill" />
-        <Label>Profile</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(home)" options={{ headerShown: false }} />
+        <Stack.Screen name="services" options={{ headerShown: false }} />
+        <Stack.Screen name="orders" options={{ headerShown: false }} />
+        <Stack.Screen name="profile" options={{ headerShown: false }} />
+      </Stack>
+      <FloatingTabBar tabs={tabs} />
+    </>
   );
 }

@@ -1,36 +1,55 @@
 
 import React from 'react';
+import { Stack } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import { Redirect } from 'expo-router';
 import FloatingTabBar from '@/components/FloatingTabBar';
 import { Href } from 'expo-router';
-import { colors } from '@/styles/commonStyles';
 
 export default function TabLayout() {
+  const { loading, user } = useAuth();
+
   const tabs = [
     {
+      name: 'home',
       route: '/(tabs)/(home)' as Href,
       label: 'Home',
-      ios_icon_name: 'house.fill',
-      android_material_icon_name: 'home' as const,
+      icon: 'home' as const,
     },
     {
+      name: 'services',
       route: '/(tabs)/services' as Href,
       label: 'Services',
-      ios_icon_name: 'briefcase.fill',
-      android_material_icon_name: 'work' as const,
+      icon: 'work' as const,
     },
     {
+      name: 'orders',
       route: '/(tabs)/orders' as Href,
       label: 'Orders',
-      ios_icon_name: 'list.bullet.rectangle',
-      android_material_icon_name: 'receipt' as const,
+      icon: 'receipt' as const,
     },
     {
+      name: 'profile',
       route: '/(tabs)/profile' as Href,
       label: 'Profile',
-      ios_icon_name: 'person.fill',
-      android_material_icon_name: 'person' as const,
+      icon: 'person' as const,
     },
   ];
 
-  return <FloatingTabBar tabs={tabs} />;
+  // Show loading state while checking auth
+  if (loading) {
+    return null;
+  }
+
+  return (
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(home)" options={{ headerShown: false }} />
+        <Stack.Screen name="services" options={{ headerShown: false }} />
+        <Stack.Screen name="orders" options={{ headerShown: false }} />
+        <Stack.Screen name="profile" options={{ headerShown: false }} />
+      </Stack>
+      <FloatingTabBar tabs={tabs} />
+    </>
+  );
 }
