@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Hub Specialist",
@@ -42,7 +43,9 @@
     },
     "extra": {
       "router": {},
-      "backendUrl": "https://6nvn8nzjrnmvyerqaxcfseztdgcaxr4y.app.specular.dev"
+      "backendUrl": "https://6nvn8nzjrnmvyerqaxcfseztdgcaxr4y.app.specular.dev",
+      "supabaseUrl": "YOUR_SUPABASE_URL",
+      "supabaseAnonKey": "YOUR_SUPABASE_ANON_KEY"
     }
   }
 }
