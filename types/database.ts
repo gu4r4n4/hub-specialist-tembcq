@@ -19,6 +19,11 @@ export interface Profile {
 export interface Category {
   id: string;
   name: string;
+  icon_material?: string;
+  icon_sf?: string;
+  description?: string;
+  display_order?: number;
+  color?: string;
   created_at: string;
 }
 

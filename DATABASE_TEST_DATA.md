@@ -7,10 +7,44 @@ Your HUB SPECIALIST database has been populated with comprehensive test data!
 
 ### 📊 Data Summary
 
-- **10 Categories**: Home Cleaning, Plumbing, Electrical, Carpentry, Painting, Gardening, Moving & Delivery, Tutoring, Personal Training, Photography
+- **20 Categories**: Complete marketplace categories with icons and colors
 - **5 Profiles**: 4 specialists + 1 consumer
 - **12 Services**: 3 services each for 4 different specialists
 - **4 Orders**: Sample orders in various statuses (new, confirmed, in_progress, done)
+
+---
+
+## 🎨 Service Categories (v1 Seed Data)
+
+All 20 categories now include:
+- **Material Icons** (Android) - e.g., `cleaning_services`, `handyman`
+- **SF Symbols** (iOS) - e.g., `sparkles`, `wrench.and.screwdriver`
+- **Color coding** - Each category has a unique color for visual distinction
+- **Descriptions** - Brief descriptions of services offered
+- **Display order** - Categories are sorted by display_order field
+
+### Complete Category List
+
+1. **Home Cleaning** - apartments, deep cleaning, move-in/out
+2. **Handyman / Repairs** - small repairs, furniture fixes, drilling
+3. **Plumbing** - leaks, clogged drains, installations
+4. **Electrical** - outlets, lighting, wiring checks
+5. **Painting** - interior/exterior painting, touch-ups
+6. **Moving & Delivery** - movers, pickup/delivery, heavy items
+7. **Appliance Repair** - washer, fridge, oven, diagnostics
+8. **Computer / IT Support** - setup, troubleshooting, Wi‑Fi, software
+9. **Phone Repair** - screen/battery replacement, diagnostics
+10. **Beauty: Hair & Makeup** - haircut, styling, makeup sessions
+11. **Nails / Manicure** - manicure, pedicure, gel
+12. **Massage & Wellness** - massage, relaxation, wellness sessions
+13. **Fitness Trainer** - personal training, plans, coaching
+14. **Tutoring** - math, languages, exam prep
+15. **Photography** - portraits, events, product photos
+16. **Event Services** - planning, MC, coordination
+17. **Car Wash / Detailing** - wash, interior cleaning, detailing
+18. **Pet Services** - grooming, walking, sitting
+19. **Gardening / Landscaping** - mowing, planting, yard cleanup
+20. **Babysitting / Nanny** - babysitting, nanny, after-school care
 
 ---
 

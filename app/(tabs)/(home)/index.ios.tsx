@@ -31,7 +31,7 @@ export default function HomeScreen() {
 
     try {
       const [categoriesResult, servicesResult] = await Promise.all([
-        supabase.from('categories').select('*').order('name'),
+        supabase.from('categories').select('*').order('display_order', { ascending: true, nullsFirst: false }),
         supabase
           .from('services')
           .select('*, specialist:profiles!specialist_profile_id(*), category:categories(*)')
@@ -245,16 +245,32 @@ export default function HomeScreen() {
             <Text style={styles.emptyText}>No categories available</Text>
           ) : (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
-              {categories.map((category, index) => (
-                <React.Fragment key={index}>
-                  <TouchableOpacity
-                    style={styles.categoryCard}
-                    onPress={() => handleCategoryPress(category.id)}
-                  >
-                    <Text style={styles.categoryName}>{category.name}</Text>
-                  </TouchableOpacity>
-                </React.Fragment>
-              ))}
+              {categories.map((category, index) => {
+                const categoryColor = category.color || colors.primary;
+                const iconMaterial = category.icon_material || 'category';
+                const iconSf = category.icon_sf || 'square.grid.2x2';
+
+                return (
+                  <React.Fragment key={index}>
+                    <TouchableOpacity
+                      style={[styles.categoryCard, { borderColor: categoryColor }]}
+                      onPress={() => handleCategoryPress(category.id)}
+                    >
+                      <View style={[styles.categoryIconContainer, { backgroundColor: categoryColor }]}>
+                        <IconSymbol
+                          ios_icon_name={iconSf}
+                          android_material_icon_name={iconMaterial}
+                          size={28}
+                          color="#FFFFFF"
+                        />
+                      </View>
+                      <Text style={styles.categoryName} numberOfLines={2}>
+                        {category.name}
+                      </Text>
+                    </TouchableOpacity>
+                  </React.Fragment>
+                );
+              })}
             </ScrollView>
           )}
         </View>
@@ -536,16 +552,26 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     backgroundColor: colors.card,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.md,
-    marginRight: spacing.sm,
-    borderWidth: 1,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    marginRight: spacing.md,
+    borderWidth: 2,
     borderColor: colors.border,
+    alignItems: 'center',
+    width: 120,
+  },
+  categoryIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
   categoryName: {
-    ...typography.body,
+    ...typography.caption,
     fontWeight: '600',
+    textAlign: 'center',
   },
   serviceCard: {
     backgroundColor: colors.card,

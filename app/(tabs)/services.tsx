@@ -29,7 +29,7 @@ export default function ServicesScreen() {
     }
 
     try {
-      const categoriesResult = await supabase.from('categories').select('*').order('name');
+      const categoriesResult = await supabase.from('categories').select('*').order('display_order', { ascending: true, nullsFirst: false });
       
       let servicesQuery = supabase
         .from('services')
@@ -119,22 +119,45 @@ export default function ServicesScreen() {
             setSelectedCategory(null);
           }}
         >
+          <IconSymbol
+            ios_icon_name="square.grid.2x2"
+            android_material_icon_name="apps"
+            size={18}
+            color={!selectedCategory ? '#FFFFFF' : colors.text}
+          />
           <Text style={[styles.categoryChipText, !selectedCategory && styles.categoryChipTextActive]}>All</Text>
         </TouchableOpacity>
-        {categories.map((category, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[styles.categoryChip, selectedCategory === category.id && styles.categoryChipActive]}
-            onPress={() => {
-              console.log('User selected category:', category.name);
-              setSelectedCategory(category.id);
-            }}
-          >
-            <Text style={[styles.categoryChipText, selectedCategory === category.id && styles.categoryChipTextActive]}>
-              {category.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {categories.map((category, index) => {
+          const isActive = selectedCategory === category.id;
+          const iconMaterial = category.icon_material || 'category';
+          const iconSf = category.icon_sf || 'square.grid.2x2';
+          const iconColor = isActive ? '#FFFFFF' : (category.color || colors.text);
+
+          return (
+            <TouchableOpacity
+              key={index}
+              style={[
+                styles.categoryChip,
+                isActive && styles.categoryChipActive,
+                isActive && category.color && { backgroundColor: category.color, borderColor: category.color }
+              ]}
+              onPress={() => {
+                console.log('User selected category:', category.name);
+                setSelectedCategory(category.id);
+              }}
+            >
+              <IconSymbol
+                ios_icon_name={iconSf}
+                android_material_icon_name={iconMaterial}
+                size={18}
+                color={iconColor}
+              />
+              <Text style={[styles.categoryChipText, isActive && styles.categoryChipTextActive]}>
+                {category.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       {loading ? (
@@ -261,9 +284,12 @@ const styles = StyleSheet.create({
   },
   categoryChip: {
     backgroundColor: colors.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.full,
     marginRight: spacing.sm,
     borderWidth: 1,
     borderColor: colors.border,
@@ -274,6 +300,7 @@ const styles = StyleSheet.create({
   },
   categoryChipText: {
     ...typography.body,
+    fontSize: 14,
     color: colors.text,
   },
   categoryChipTextActive: {
