@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Hub Specialist",
@@ -36,7 +37,7 @@
       "expo-router",
       "expo-web-browser"
     ],
-    "scheme": "Hub Specialist",
+    "scheme": "hubspecialist",
     "experiments": {
       "typedRoutes": true
     },

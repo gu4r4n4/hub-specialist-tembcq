@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types/database';
+import { authClient } from '@/lib/auth-client';
+import { IconSymbol } from '@/components/IconSymbol';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -45,6 +47,42 @@ export default function RegisterScreen() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    console.log('User tapped Google Sign In');
+    setLoading(true);
+    setError('');
+
+    try {
+      await authClient.signIn.social({
+        provider: 'google',
+        callbackURL: '/(tabs)/(home)',
+      });
+      console.log('Google sign-in initiated');
+    } catch (err: any) {
+      console.error('Google sign-in failed:', err);
+      setError(err.message || 'Google sign-in failed. Please try again.');
+      setLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    console.log('User tapped Apple Sign In');
+    setLoading(true);
+    setError('');
+
+    try {
+      await authClient.signIn.social({
+        provider: 'apple',
+        callbackURL: '/(tabs)/(home)',
+      });
+      console.log('Apple sign-in initiated');
+    } catch (err: any) {
+      console.error('Apple sign-in failed:', err);
+      setError(err.message || 'Apple sign-in failed. Please try again.');
+      setLoading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -61,6 +99,44 @@ export default function RegisterScreen() {
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
+
+            <View style={styles.socialButtons}>
+              <TouchableOpacity
+                style={[styles.socialButton, styles.googleButton]}
+                onPress={handleGoogleSignIn}
+                disabled={loading}
+              >
+                <IconSymbol
+                  ios_icon_name="g.circle.fill"
+                  android_material_icon_name="login"
+                  size={20}
+                  color="#FFFFFF"
+                />
+                <Text style={styles.socialButtonText}>Continue with Google</Text>
+              </TouchableOpacity>
+
+              {Platform.OS === 'ios' && (
+                <TouchableOpacity
+                  style={[styles.socialButton, styles.appleButton]}
+                  onPress={handleAppleSignIn}
+                  disabled={loading}
+                >
+                  <IconSymbol
+                    ios_icon_name="apple.logo"
+                    android_material_icon_name="login"
+                    size={20}
+                    color="#FFFFFF"
+                  />
+                  <Text style={styles.socialButtonText}>Continue with Apple</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
 
             <View style={styles.form}>
               <View style={styles.inputGroup}>
@@ -204,6 +280,43 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.error,
     fontSize: 14,
+  },
+  socialButtons: {
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+  },
+  googleButton: {
+    backgroundColor: '#4285F4',
+  },
+  appleButton: {
+    backgroundColor: '#000000',
+  },
+  socialButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+  },
+  dividerText: {
+    ...typography.bodySecondary,
+    marginHorizontal: spacing.md,
   },
   form: {
     gap: spacing.lg,

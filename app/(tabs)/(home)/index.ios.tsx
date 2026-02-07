@@ -97,7 +97,7 @@ export default function HomeScreen() {
             size={80}
             color={colors.primary}
           />
-          <Text style={styles.setupTitle}>Welcome to HUB SPECIALIST</Text>
+          <Text style={styles.setupTitle}>Welcome to SpecHUB</Text>
           <Text style={styles.setupSubtitle}>A Services Marketplace</Text>
           
           <View style={styles.setupCard}>
@@ -189,7 +189,7 @@ export default function HomeScreen() {
     );
   }
 
-  const greetingText = user ? `Hello, ${profile?.full_name || 'there'}!` : 'Welcome to HUB SPECIALIST';
+  const greetingText = user ? `Hello, ${profile?.full_name || 'there'}!` : 'Welcome to SpecHUB';
   const subtitleText = user ? 'Find the perfect service for your needs' : 'Sign in to book services';
 
   return (
