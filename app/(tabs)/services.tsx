@@ -1,6 +1,6 @@
 
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, FlatList } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
@@ -17,6 +17,10 @@ export default function ServicesScreen() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState((params.search as string) || '');
   const [selectedCategory, setSelectedCategory] = useState<string | null>((params.category as string) || null);
+
+  const categoriesData = useMemo(() => {
+    return [{ id: 'all', name: 'All' } as any, ...categories];
+  }, [categories]);
 
   useEffect(() => {
     console.log('ServicesScreen: Loading services');
@@ -112,74 +116,68 @@ export default function ServicesScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        directionalLockEnabled
-        alwaysBounceVertical={false}
-        bounces={false}
-        style={styles.categoriesScroll}
-        contentContainerStyle={styles.categoriesContent}
-      >
-        <TouchableOpacity
-          style={[styles.categoryCard, !selectedCategory && styles.categoryCardActive]}
-          onPress={() => {
-            console.log('User selected All categories');
-            setSelectedCategory(null);
-          }}
-        >
-          <View style={[styles.categoryIconContainer, !selectedCategory && { backgroundColor: colors.primary }]}>
-            <IconSymbol
-              ios_icon_name="square.grid.2x2"
-              android_material_icon_name="apps"
-              size={28}
-              color="#FFFFFF"
-            />
-          </View>
-          <Text style={styles.categoryName}>All</Text>
-        </TouchableOpacity>
-        {categories.map((category, index) => {
-          const isActive = selectedCategory === category.id;
-          const categoryColor = category.color || colors.primary;
-          
-          // Prefer our mapping (consistent UI), fallback to DB values.
-          // Also normalize Material icon names (supports both underscore and hyphen sources).
-          const iconMapping = getCategoryIcons(category.name);
-          const iconMaterialRaw = iconMapping.icon_material || category.icon_material || 'category';
-          const iconMaterial = normalizeMaterialIconName(iconMaterialRaw);
-          const iconSf = iconMapping.icon_sf || category.icon_sf || 'square.grid.2x2';
+      {/* Categories row: use a fixed-height wrapper + horizontal FlatList.
+          This prevents a tall invisible touch area that blocks vertical scrolling on iOS. */}
+      <View style={styles.categoriesWrapper} pointerEvents="box-none">
+        <FlatList
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          data={categoriesData}
+          keyExtractor={(item: any) => item.id}
+          style={styles.categoriesList}
+          contentContainerStyle={styles.categoriesListContent}
+          renderItem={({ item }: any) => {
+            const isAll = item.id === 'all';
+            const isActive = isAll ? !selectedCategory : selectedCategory === item.id;
+            const categoryColor = (item.color || colors.primary) as string;
 
-          return (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.categoryCard,
-                isActive && styles.categoryCardActive,
-                isActive && { borderColor: categoryColor }
-              ]}
-              onPress={() => {
-                console.log('User selected category:', category.name);
-                setSelectedCategory(category.id);
-              }}
-            >
-              <View style={[
-                styles.categoryIconContainer,
-                { backgroundColor: categoryColor }
-              ]}>
-                <IconSymbol
-                  ios_icon_name={iconSf}
-                  android_material_icon_name={iconMaterial as any}
-                  size={28}
-                  color="#FFFFFF"
-                />
-              </View>
-              <Text style={styles.categoryName} numberOfLines={2}>
-                {category.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+            const iconMapping = isAll ? null : getCategoryIcons(item.name);
+            const iconMaterialRaw = isAll
+              ? 'apps'
+              : (iconMapping?.icon_material || item.icon_material || 'category');
+            const iconMaterial = normalizeMaterialIconName(iconMaterialRaw);
+            const iconSf = isAll
+              ? 'square.grid.2x2'
+              : (iconMapping?.icon_sf || item.icon_sf || 'square.grid.2x2');
+
+            return (
+              <TouchableOpacity
+                style={[
+                  styles.categoryCard,
+                  isActive && styles.categoryCardActive,
+                  isActive && { borderColor: categoryColor },
+                ]}
+                onPress={() => {
+                  if (isAll) {
+                    console.log('User selected All categories');
+                    setSelectedCategory(null);
+                  } else {
+                    console.log('User selected category:', item.name);
+                    setSelectedCategory(item.id);
+                  }
+                }}
+              >
+                <View
+                  style={[
+                    styles.categoryIconContainer,
+                    { backgroundColor: isAll && isActive ? colors.primary : categoryColor },
+                  ]}
+                >
+                  <IconSymbol
+                    ios_icon_name={iconSf}
+                    android_material_icon_name={iconMaterial as any}
+                    size={26}
+                    color="#FFFFFF"
+                  />
+                </View>
+                <Text style={styles.categoryName} numberOfLines={2}>
+                  {item.name}
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </View>
 
       {loading ? (
         <View style={styles.loadingContainer}>
@@ -304,18 +302,19 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  categoriesScroll: {
-    paddingLeft: spacing.lg,
+  // Fixed-height wrapper prevents the horizontal categories row from creating
+  // a tall invisible touch area that blocks vertical scrolling.
+  categoriesWrapper: {
+    height: 112,
     marginBottom: spacing.sm,
-    // Constrain height tightly to the card height to avoid a large touch-blocking area.
+  },
+  categoriesList: {
     height: 112,
   },
-  // Prevent horizontal ScrollView from stretching cards vertically
-  // (default content container alignItems can cause tall cards)
-  categoriesContent: {
-    alignItems: 'flex-start',
+  categoriesListContent: {
+    paddingLeft: spacing.lg,
     paddingRight: spacing.lg,
-    paddingBottom: 0,
+    alignItems: 'flex-start',
   },
   // Match Home tab category card styling exactly
   categoryCard: {
