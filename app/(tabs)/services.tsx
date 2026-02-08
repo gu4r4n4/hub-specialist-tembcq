@@ -7,6 +7,7 @@ import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Service, Category } from '@/types/database';
 import { IconSymbol } from '@/components/IconSymbol';
+import { getCategoryIcons } from '@/utils/categoryIcons';
 
 export default function ServicesScreen() {
   const router = useRouter();
@@ -113,46 +114,56 @@ export default function ServicesScreen() {
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
         <TouchableOpacity
-          style={[styles.categoryChip, !selectedCategory && styles.categoryChipActive]}
+          style={[styles.categoryCard, !selectedCategory && styles.categoryCardActive]}
           onPress={() => {
             console.log('User selected All categories');
             setSelectedCategory(null);
           }}
         >
-          <IconSymbol
-            ios_icon_name="square.grid.2x2"
-            android_material_icon_name="apps"
-            size={18}
-            color={!selectedCategory ? '#FFFFFF' : colors.text}
-          />
-          <Text style={[styles.categoryChipText, !selectedCategory && styles.categoryChipTextActive]}>All</Text>
+          <View style={[styles.categoryIconContainer, !selectedCategory && { backgroundColor: colors.primary }]}>
+            <IconSymbol
+              ios_icon_name="square.grid.2x2"
+              android_material_icon_name="apps"
+              size={28}
+              color="#FFFFFF"
+            />
+          </View>
+          <Text style={styles.categoryName}>All</Text>
         </TouchableOpacity>
         {categories.map((category, index) => {
           const isActive = selectedCategory === category.id;
-          const iconMaterial = category.icon_material || 'category';
-          const iconSf = category.icon_sf || 'square.grid.2x2';
-          const iconColor = isActive ? '#FFFFFF' : (category.color || colors.text);
+          const categoryColor = category.color || colors.primary;
+          
+          // Get icons from mapping, fallback to database values
+          const iconMapping = getCategoryIcons(category.name);
+          const iconMaterial = category.icon_material || iconMapping.icon_material;
+          const iconSf = category.icon_sf || iconMapping.icon_sf;
 
           return (
             <TouchableOpacity
               key={index}
               style={[
-                styles.categoryChip,
-                isActive && styles.categoryChipActive,
-                isActive && category.color && { backgroundColor: category.color, borderColor: category.color }
+                styles.categoryCard,
+                isActive && styles.categoryCardActive,
+                isActive && { borderColor: categoryColor }
               ]}
               onPress={() => {
                 console.log('User selected category:', category.name);
                 setSelectedCategory(category.id);
               }}
             >
-              <IconSymbol
-                ios_icon_name={iconSf}
-                android_material_icon_name={iconMaterial}
-                size={18}
-                color={iconColor}
-              />
-              <Text style={[styles.categoryChipText, isActive && styles.categoryChipTextActive]}>
+              <View style={[
+                styles.categoryIconContainer,
+                { backgroundColor: categoryColor }
+              ]}>
+                <IconSymbol
+                  ios_icon_name={iconSf}
+                  android_material_icon_name={iconMaterial}
+                  size={28}
+                  color="#FFFFFF"
+                />
+              </View>
+              <Text style={styles.categoryName} numberOfLines={2}>
                 {category.name}
               </Text>
             </TouchableOpacity>
@@ -282,29 +293,32 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.lg,
     marginBottom: spacing.md,
   },
-  categoryChip: {
+  // Match Home tab category card styling exactly
+  categoryCard: {
     backgroundColor: colors.card,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
-    marginRight: spacing.sm,
-    borderWidth: 1,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    marginRight: spacing.md,
+    borderWidth: 2,
     borderColor: colors.border,
+    alignItems: 'center',
+    width: 120,
   },
-  categoryChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+  categoryCardActive: {
+    borderWidth: 2,
   },
-  categoryChipText: {
-    ...typography.body,
-    fontSize: 14,
-    color: colors.text,
+  categoryIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
   },
-  categoryChipTextActive: {
-    color: '#FFFFFF',
+  categoryName: {
+    ...typography.caption,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   scrollView: {
     flex: 1,

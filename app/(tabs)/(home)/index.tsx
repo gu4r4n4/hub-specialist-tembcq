@@ -8,6 +8,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Category, Service } from '@/types/database';
 import { IconSymbol } from '@/components/IconSymbol';
+import { getCategoryIcons } from '@/utils/categoryIcons';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -131,7 +132,7 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.featuresCard}>
-            <Text style={styles.featuresTitle}>What you'll get:</Text>
+            <Text style={styles.featuresTitle}>What you&apos;ll get:</Text>
             <View style={styles.featuresList}>
               <View style={styles.featureItem}>
                 <IconSymbol
@@ -247,8 +248,11 @@ export default function HomeScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
               {categories.map((category, index) => {
                 const categoryColor = category.color || colors.primary;
-                const iconMaterial = category.icon_material || 'category';
-                const iconSf = category.icon_sf || 'square.grid.2x2';
+                
+                // Get icons from mapping, fallback to database values
+                const iconMapping = getCategoryIcons(category.name);
+                const iconMaterial = category.icon_material || iconMapping.icon_material;
+                const iconSf = category.icon_sf || iconMapping.icon_sf;
 
                 return (
                   <React.Fragment key={index}>
