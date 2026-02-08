@@ -183,7 +183,12 @@ export default function ServicesScreen() {
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          contentInsetAdjustmentBehavior="never"
+          contentContainerStyle={styles.servicesContent}
+        >
           {services.length === 0 ? (
             <Text style={styles.emptyText}>No services found</Text>
           ) : (
@@ -241,7 +246,7 @@ export default function ServicesScreen() {
               })}
             </React.Fragment>
           )}
-          <View style={{ height: 100 }} />
+          {/* Spacer handled by styles.servicesContent paddingBottom */}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -336,6 +341,12 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  // Avoid a large blank area at the top of the list on iOS (auto content inset)
+  // and keep enough bottom space for the floating tab bar.
+  servicesContent: {
+    paddingTop: 0,
+    paddingBottom: 120,
   },
   loadingContainer: {
     flex: 1,
