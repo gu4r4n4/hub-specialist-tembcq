@@ -58,3 +58,12 @@ export interface Order {
   consumer?: Profile;
   specialist?: Profile;
 }
+
+export interface SpecialistPortfolioImage {
+  id: string;
+  specialist_profile_id: string;
+  image_url: string;
+  sort_order: number;
+  title: string | null;
+  created_at: string;
+}

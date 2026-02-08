@@ -196,6 +196,7 @@ export default function ServicesScreen() {
             <React.Fragment>
               {services.map((service, index) => {
                 const specialistName = service.specialist?.full_name || 'Unknown';
+                const specialistCity = service.specialist?.city || '';
                 const categoryName = service.category?.name || 'Uncategorized';
                 const priceText = `${service.currency} ${service.price.toFixed(2)}`;
                 const ratingText = service.rating_count > 0 ? `${service.rating_avg.toFixed(1)} (${service.rating_count})` : 'No ratings';
@@ -213,16 +214,30 @@ export default function ServicesScreen() {
                     <Text style={styles.serviceDescription} numberOfLines={2}>
                       {service.description}
                     </Text>
-                    <View style={styles.serviceFooter}>
-                      <View style={styles.serviceInfo}>
-                        <IconSymbol
-                          ios_icon_name="person.fill"
-                          android_material_icon_name="person"
-                          size={16}
-                          color={colors.textSecondary}
-                        />
-                        <Text style={styles.serviceInfoText}>{specialistName}</Text>
+                    
+                    {/* Specialist Summary Row */}
+                    <View style={styles.specialistSummary}>
+                      <IconSymbol
+                        ios_icon_name="person.circle.fill"
+                        android_material_icon_name="account-circle"
+                        size={32}
+                        color={colors.primary}
+                      />
+                      <View style={styles.specialistInfo}>
+                        <Text style={styles.specialistName}>{specialistName}</Text>
+                        <View style={styles.specialistRating}>
+                          <IconSymbol
+                            ios_icon_name="star.fill"
+                            android_material_icon_name="star"
+                            size={14}
+                            color={colors.warning}
+                          />
+                          <Text style={styles.specialistRatingText}>{ratingText}</Text>
+                        </View>
                       </View>
+                    </View>
+
+                    <View style={styles.serviceFooter}>
                       <View style={styles.serviceInfo}>
                         <IconSymbol
                           ios_icon_name="tag.fill"
@@ -231,15 +246,6 @@ export default function ServicesScreen() {
                           color={colors.textSecondary}
                         />
                         <Text style={styles.serviceInfoText}>{categoryName}</Text>
-                      </View>
-                      <View style={styles.serviceInfo}>
-                        <IconSymbol
-                          ios_icon_name="star.fill"
-                          android_material_icon_name="star"
-                          size={16}
-                          color={colors.warning}
-                        />
-                        <Text style={styles.serviceInfoText}>{ratingText}</Text>
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -402,6 +408,33 @@ const styles = StyleSheet.create({
   serviceDescription: {
     ...typography.bodySecondary,
     marginBottom: spacing.md,
+  },
+  specialistSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.sm,
+  },
+  specialistInfo: {
+    flex: 1,
+  },
+  specialistName: {
+    ...typography.body,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  specialistRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  specialistRatingText: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
   serviceFooter: {
     flexDirection: 'row',
