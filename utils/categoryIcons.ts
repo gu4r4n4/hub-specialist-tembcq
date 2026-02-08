@@ -34,7 +34,8 @@ export const CATEGORY_ICON_MAP: Record<string, CategoryIconMapping> = {
     icon_sf: 'truck.box.fill',
   },
   'Appliance Repair': {
-    icon_material: 'handyman',
+    // screwdriver/repair
+    icon_material: 'build',
     icon_sf: 'wrench.and.screwdriver.fill',
   },
   'Computer / IT Support': {
@@ -42,10 +43,12 @@ export const CATEGORY_ICON_MAP: Record<string, CategoryIconMapping> = {
     icon_sf: 'laptopcomputer',
   },
   'Phone Repair': {
-    icon_material: 'phone-iphone',
-    icon_sf: 'iphone',
+    // phone
+    icon_material: 'phone',
+    icon_sf: 'phone.fill',
   },
   'Beauty: Hair & Makeup': {
+    // scissors
     icon_material: 'content-cut',
     icon_sf: 'scissors',
   },
@@ -54,10 +57,12 @@ export const CATEGORY_ICON_MAP: Record<string, CategoryIconMapping> = {
     icon_sf: 'hands.sparkles',
   },
   'Massage & Wellness': {
-    icon_material: 'back-hand',
+    // hand
+    icon_material: 'pan-tool',
     icon_sf: 'hand.raised.fill',
   },
   'Fitness Trainer': {
+    // dumbbells
     icon_material: 'fitness-center',
     icon_sf: 'dumbbell.fill',
   },
@@ -74,6 +79,7 @@ export const CATEGORY_ICON_MAP: Record<string, CategoryIconMapping> = {
     icon_sf: 'calendar',
   },
   'Car Wash / Detailing': {
+    // car
     icon_material: 'directions-car',
     icon_sf: 'car.fill',
   },
@@ -91,14 +97,21 @@ export const CATEGORY_ICON_MAP: Record<string, CategoryIconMapping> = {
   },
 };
 
+// Normalize icon names coming from DB/seeds.
+// Some sources use underscores (e.g., "local_shipping"), while @expo/vector-icons
+// MaterialIcons typically expects hyphens (e.g., "local-shipping").
+export function normalizeMaterialIconName(iconName: string): string {
+  return iconName.replace(/_/g, '-');
+}
+
 // Helper function to get icons for a category
 export function getCategoryIcons(categoryName: string): CategoryIconMapping {
   const mapping = CATEGORY_ICON_MAP[categoryName];
-  
+
   if (mapping) {
     return mapping;
   }
-  
+
   // Fallback icons if category not found in mapping
   return {
     icon_material: 'category',

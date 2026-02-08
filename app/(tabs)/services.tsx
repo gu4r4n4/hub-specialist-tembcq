@@ -7,7 +7,7 @@ import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Service, Category } from '@/types/database';
 import { IconSymbol } from '@/components/IconSymbol';
-import { getCategoryIcons } from '@/utils/categoryIcons';
+import { getCategoryIcons, normalizeMaterialIconName } from '@/utils/categoryIcons';
 
 export default function ServicesScreen() {
   const router = useRouter();
@@ -134,10 +134,12 @@ export default function ServicesScreen() {
           const isActive = selectedCategory === category.id;
           const categoryColor = category.color || colors.primary;
           
-          // Get icons from mapping, fallback to database values
+          // Prefer our mapping (consistent UI), fallback to DB values.
+          // Also normalize Material icon names (supports both underscore and hyphen sources).
           const iconMapping = getCategoryIcons(category.name);
-          const iconMaterial = category.icon_material || iconMapping.icon_material;
-          const iconSf = category.icon_sf || iconMapping.icon_sf;
+          const iconMaterialRaw = iconMapping.icon_material || category.icon_material || 'category';
+          const iconMaterial = normalizeMaterialIconName(iconMaterialRaw);
+          const iconSf = iconMapping.icon_sf || category.icon_sf || 'square.grid.2x2';
 
           return (
             <TouchableOpacity
@@ -158,7 +160,7 @@ export default function ServicesScreen() {
               ]}>
                 <IconSymbol
                   ios_icon_name={iconSf}
-                  android_material_icon_name={iconMaterial}
+                  android_material_icon_name={iconMaterial as any}
                   size={28}
                   color="#FFFFFF"
                 />
