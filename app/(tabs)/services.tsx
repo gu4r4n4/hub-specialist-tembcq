@@ -115,6 +115,9 @@ export default function ServicesScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        directionalLockEnabled
+        alwaysBounceVertical={false}
+        bounces={false}
         style={styles.categoriesScroll}
         contentContainerStyle={styles.categoriesContent}
       >
@@ -303,9 +306,9 @@ const styles = StyleSheet.create({
   },
   categoriesScroll: {
     paddingLeft: spacing.lg,
-    marginBottom: spacing.md,
-    // Constrain height so the horizontal ScrollView doesn't grow tall and create a big empty gap
-    height: 132,
+    marginBottom: spacing.sm,
+    // Constrain height tightly to the card height to avoid a large touch-blocking area.
+    height: 112,
   },
   // Prevent horizontal ScrollView from stretching cards vertically
   // (default content container alignItems can cause tall cards)
@@ -317,7 +320,9 @@ const styles = StyleSheet.create({
   // Match Home tab category card styling exactly
   categoryCard: {
     backgroundColor: colors.card,
-    padding: spacing.md,
+    // Slightly tighter than Home to fit inside a smaller fixed-height categories row
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: borderRadius.lg,
     marginRight: spacing.md,
     borderWidth: 2,
@@ -330,12 +335,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   categoryIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   categoryName: {
     ...typography.caption,
