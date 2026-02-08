@@ -304,12 +304,15 @@ const styles = StyleSheet.create({
   categoriesScroll: {
     paddingLeft: spacing.lg,
     marginBottom: spacing.md,
+    // Constrain height so the horizontal ScrollView doesn't grow tall and create a big empty gap
+    height: 132,
   },
   // Prevent horizontal ScrollView from stretching cards vertically
   // (default content container alignItems can cause tall cards)
   categoriesContent: {
     alignItems: 'flex-start',
     paddingRight: spacing.lg,
+    paddingBottom: 0,
   },
   // Match Home tab category card styling exactly
   categoryCard: {
