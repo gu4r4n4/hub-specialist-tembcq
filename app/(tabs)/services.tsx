@@ -112,7 +112,12 @@ export default function ServicesScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.categoriesScroll}
+        contentContainerStyle={styles.categoriesContent}
+      >
         <TouchableOpacity
           style={[styles.categoryCard, !selectedCategory && styles.categoryCardActive]}
           onPress={() => {
@@ -295,6 +300,12 @@ const styles = StyleSheet.create({
     paddingLeft: spacing.lg,
     marginBottom: spacing.md,
   },
+  // Prevent horizontal ScrollView from stretching cards vertically
+  // (default content container alignItems can cause tall cards)
+  categoriesContent: {
+    alignItems: 'flex-start',
+    paddingRight: spacing.lg,
+  },
   // Match Home tab category card styling exactly
   categoryCard: {
     backgroundColor: colors.card,
@@ -304,6 +315,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.border,
     alignItems: 'center',
+    alignSelf: 'flex-start',
     width: 120,
   },
   categoryCardActive: {
