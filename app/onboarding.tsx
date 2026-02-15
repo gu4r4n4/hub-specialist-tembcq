@@ -52,18 +52,18 @@ const STEPS: OnboardingStep[] = [
     {
         id: '3',
         type: 'intro',
-        title: 'Trusted by Thousands',
-        description: 'Read reviews, compare prices, and book services instantly. All specialists are verified and rated by real customers.',
-        icon: 'checkmark.seal.fill',
-        materialIcon: 'verified',
+        title: 'Instant Booking',
+        description: 'Compare prices, read reviews, and book services instantly. All specialists are rated by real customers.',
+        icon: 'calendar.circle.fill',
+        materialIcon: 'event',
     },
     {
         id: '4',
-        type: 'location',
-        title: 'Choose Your City',
-        description: 'Choose your city to see services available in your area. You can always change this later in settings.',
-        icon: 'map.circle.fill',
-        materialIcon: 'location-on',
+        type: 'intro',
+        title: 'Quality Guaranteed',
+        description: 'We ensure high-quality service delivery. Your satisfaction is our top priority in every job.',
+        icon: 'checkmark.seal.fill',
+        materialIcon: 'verified',
     },
 ];
 
@@ -72,50 +72,9 @@ export default function OnboardingScreen() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const flatListRef = useRef<FlatList<OnboardingStep>>(null);
 
-    // State for Location Step
-    const [cities, setCities] = useState<string[]>([]);
-    const [selectedLocation, setSelectedLocation] = useState<string>('');
-    const [loadingCities, setLoadingCities] = useState(false);
-    const [showLocationModal, setShowLocationModal] = useState(false);
-
-    useEffect(() => {
-        fetchCities();
-    }, []);
-
-    const fetchCities = async () => {
-        if (!isSupabaseConfigured) return;
-
-        setLoadingCities(true);
-        try {
-            const { data, error } = await supabase
-                .from('services')
-                .select('city')
-                .not('city', 'is', null)
-                .eq('is_active', true);
-
-            if (error) throw error;
-
-            if (data) {
-                const uniqueCities = [...new Set(data.map(item => item.city).filter(Boolean))].sort();
-                setCities(uniqueCities as string[]);
-            }
-        } catch (err) {
-            console.error('Error fetching cities:', err);
-        } finally {
-            setLoadingCities(false);
-        }
-    };
-
     const handleFinish = async () => {
         try {
             await AsyncStorage.setItem('onboarding_seen', 'true');
-
-            if (selectedLocation) {
-                await AsyncStorage.setItem('user_location_preference', selectedLocation);
-            } else {
-                await AsyncStorage.removeItem('user_location_preference');
-            }
-
             router.replace('/(tabs)/(home)');
         } catch (error) {
             console.error('Error saving onboarding status:', error);
@@ -135,11 +94,6 @@ export default function OnboardingScreen() {
         handleFinish();
     };
 
-    const selectLocation = (city: string) => {
-        setSelectedLocation(city);
-        setShowLocationModal(false);
-    };
-
     const onMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
         const index = Math.round(event.nativeEvent.contentOffset.x / width);
         if (index !== currentIndex) {
@@ -147,80 +101,22 @@ export default function OnboardingScreen() {
         }
     };
 
-    const renderIntroOutro = (item: OnboardingStep) => (
-        <View style={styles.contentContainer}>
-            <View style={styles.imageContainer}>
-                <IconSymbol
-                    ios_icon_name={item.icon as any}
-                    android_material_icon_name={item.materialIcon as any}
-                    size={100}
-                    color={colors.primary}
-                />
-            </View>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.description}>{item.description}</Text>
-        </View>
-    );
-
-    const renderLocationSelect = (item: OnboardingStep) => (
-        <View style={styles.contentContainer}>
-            <View style={styles.locationIconContainer}>
-                <IconSymbol
-                    ios_icon_name="map.circle.fill"
-                    android_material_icon_name="location-on"
-                    size={80}
-                    color={colors.primary}
-                />
-            </View>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.description}>{item.description}</Text>
-
-            {/* Location Selector Button */}
-            <TouchableOpacity
-                style={styles.locationButton}
-                onPress={() => setShowLocationModal(true)}
-                activeOpacity={0.7}
-            >
-                <View style={styles.locationIconBox}>
+    const renderItem = ({ item }: { item: OnboardingStep }) => (
+        <View style={styles.slide}>
+            <View style={styles.contentContainer}>
+                <View style={styles.imageContainer}>
                     <IconSymbol
-                        ios_icon_name="mappin.circle.fill"
-                        android_material_icon_name="location-on"
-                        size={24}
+                        ios_icon_name={item.icon as any}
+                        android_material_icon_name={item.materialIcon as any}
+                        size={100}
                         color={colors.primary}
                     />
                 </View>
-                <View style={styles.locationTextContainer}>
-                    <Text style={styles.locationLabel}>Your Location</Text>
-                    <Text style={styles.locationValue}>
-                        {selectedLocation || 'All Locations'}
-                    </Text>
-                </View>
-                <IconSymbol
-                    ios_icon_name="chevron.down"
-                    android_material_icon_name="expand-more"
-                    size={20}
-                    color={colors.textSecondary}
-                />
-            </TouchableOpacity>
-
-            <Text style={styles.hintText}>
-                {selectedLocation
-                    ? `You'll see services available in ${selectedLocation}`
-                    : "You'll see services from all locations"}
-            </Text>
+                <Text style={styles.title}>{item.title}</Text>
+                <Text style={styles.description}>{item.description}</Text>
+            </View>
         </View>
     );
-
-    const renderItem = ({ item }: { item: OnboardingStep }) => {
-        return (
-            <View style={styles.slide}>
-                {item.type === 'location'
-                    ? renderLocationSelect(item)
-                    : renderIntroOutro(item)
-                }
-            </View>
-        );
-    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -241,7 +137,6 @@ export default function OnboardingScreen() {
                 keyExtractor={(item) => item.id}
                 style={styles.list}
                 scrollEnabled={true}
-                extraData={{ selectedLocation, cities, loadingCities }}
                 getItemLayout={(_, index) => ({
                     length: width,
                     offset: width * index,
@@ -277,115 +172,6 @@ export default function OnboardingScreen() {
                     </Text>
                 </TouchableOpacity>
             </View>
-
-            {/* Location Modal */}
-            <Modal
-                visible={showLocationModal}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setShowLocationModal(false)}
-            >
-                <Pressable
-                    style={styles.modalOverlay}
-                    onPress={() => setShowLocationModal(false)}
-                >
-                    <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-                        <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>Select Your City</Text>
-                            <TouchableOpacity
-                                onPress={() => setShowLocationModal(false)}
-                                style={styles.modalCloseButton}
-                            >
-                                <IconSymbol
-                                    ios_icon_name="xmark.circle.fill"
-                                    android_material_icon_name="cancel"
-                                    size={28}
-                                    color={colors.textSecondary}
-                                />
-                            </TouchableOpacity>
-                        </View>
-
-                        <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-                            {/* All Locations Option */}
-                            <TouchableOpacity
-                                style={[
-                                    styles.locationOption,
-                                    selectedLocation === '' && styles.locationOptionSelected
-                                ]}
-                                onPress={() => selectLocation('')}
-                            >
-                                <View style={styles.locationOptionContent}>
-                                    <IconSymbol
-                                        ios_icon_name="globe"
-                                        android_material_icon_name="public"
-                                        size={22}
-                                        color={selectedLocation === '' ? colors.primary : colors.textSecondary}
-                                    />
-                                    <Text style={[
-                                        styles.locationOptionText,
-                                        selectedLocation === '' && styles.locationOptionTextSelected
-                                    ]}>
-                                        All Locations
-                                    </Text>
-                                </View>
-                                {selectedLocation === '' && (
-                                    <IconSymbol
-                                        ios_icon_name="checkmark.circle.fill"
-                                        android_material_icon_name="check-circle"
-                                        size={24}
-                                        color={colors.primary}
-                                    />
-                                )}
-                            </TouchableOpacity>
-
-                            {/* Divider */}
-                            <View style={styles.divider} />
-
-                            {/* City Options */}
-                            {loadingCities ? (
-                                <View style={styles.loadingContainer}>
-                                    <ActivityIndicator size="large" color={colors.primary} />
-                                    <Text style={styles.loadingText}>Loading cities...</Text>
-                                </View>
-                            ) : (
-                                cities.map((city) => (
-                                    <TouchableOpacity
-                                        key={city}
-                                        style={[
-                                            styles.locationOption,
-                                            selectedLocation === city && styles.locationOptionSelected
-                                        ]}
-                                        onPress={() => selectLocation(city)}
-                                    >
-                                        <View style={styles.locationOptionContent}>
-                                            <IconSymbol
-                                                ios_icon_name="mappin.circle"
-                                                android_material_icon_name="place"
-                                                size={22}
-                                                color={selectedLocation === city ? colors.primary : colors.textSecondary}
-                                            />
-                                            <Text style={[
-                                                styles.locationOptionText,
-                                                selectedLocation === city && styles.locationOptionTextSelected
-                                            ]}>
-                                                {city}
-                                            </Text>
-                                        </View>
-                                        {selectedLocation === city && (
-                                            <IconSymbol
-                                                ios_icon_name="checkmark.circle.fill"
-                                                android_material_icon_name="check-circle"
-                                                size={24}
-                                                color={colors.primary}
-                                            />
-                                        )}
-                                    </TouchableOpacity>
-                                ))
-                            )}
-                        </ScrollView>
-                    </Pressable>
-                </Pressable>
-            </Modal>
         </SafeAreaView>
     );
 }
