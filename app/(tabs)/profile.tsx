@@ -27,6 +27,10 @@ export default function ProfileScreen() {
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewType, setPreviewType] = useState<'profile' | 'portfolio'>('profile');
 
+  useEffect(() => {
+    console.log('MODALS STATE:', { showPreviewModal, showSignOutModal });
+  }, [showPreviewModal, showSignOutModal]);
+
   const handleSignOut = async () => {
     console.log('User confirmed sign out');
     setShowSignOutModal(false);
@@ -76,62 +80,41 @@ export default function ProfileScreen() {
     }
   };
 
-  const pickProfileImage = async () => {
-    Alert.alert(
-      'Profile Picture',
-      'Choose a source',
-      [
-        { text: 'Camera', onPress: () => handleLaunchImagePicker('profile', true) },
-        { text: 'Gallery', onPress: () => handleLaunchImagePicker('profile', false) },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  };
-
-  const pickPortfolioImage = async () => {
-    Alert.alert(
-      'Portfolio Image',
-      'Choose a source',
-      [
-        { text: 'Camera', onPress: () => handleLaunchImagePicker('portfolio', true) },
-        { text: 'Gallery', onPress: () => handleLaunchImagePicker('portfolio', false) },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  };
-
-  const handleLaunchImagePicker = async (type: 'profile' | 'portfolio', useCamera: boolean) => {
+  const openGallery = async (type: 'profile' | 'portfolio') => {
     try {
-      const permissionResult = useCamera
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('[ImagePicker] openGallery pressed', type);
+
+      // Close any potential keyboards that might interfere
+      Keyboard.dismiss();
+
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      console.log('[ImagePicker] permission result:', permissionResult);
 
       if (!permissionResult.granted) {
-        Alert.alert('Permission Required', `Please allow access to your ${useCamera ? 'camera' : 'photo library'}.`);
+        Alert.alert('Permission Required', 'Please allow access to your photo library in settings to upload images.');
         return;
       }
 
-      const options: ImagePicker.ImagePickerOptions = {
+      const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: type === 'profile' ? [1, 1] : undefined,
         quality: 0.8,
         base64: true,
-      };
+      });
 
-      const result = useCamera
-        ? await ImagePicker.launchCameraAsync(options)
-        : await ImagePicker.launchImageLibraryAsync(options);
+      console.log('[ImagePicker] result.canceled:', result.canceled);
 
-      if (!result.canceled && result.assets[0]) {
+      if (!result.canceled && result.assets?.[0]) {
+        console.log('[ImagePicker] image selected:', result.assets[0].uri.substring(0, 50) + '...');
         setSelectedImage(result.assets[0].uri);
         setSelectedBase64(result.assets[0].base64 || null);
         setPreviewType(type);
         setShowPreviewModal(true);
       }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
+    } catch (error: any) {
+      console.error('[ImagePicker] openGallery error:', error);
+      Alert.alert('Error', error?.message || 'Failed to open image gallery');
     }
   };
 
@@ -324,7 +307,7 @@ export default function ProfileScreen() {
         <View style={styles.profileCard}>
           <TouchableOpacity
             style={styles.avatarContainer}
-            onPress={pickProfileImage}
+            onPress={() => openGallery('profile')}
             disabled={uploadingImage}
           >
             {profile.avatar_url ? (
@@ -452,7 +435,7 @@ export default function ProfileScreen() {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Portfolio Gallery</Text>
               <TouchableOpacity
-                onPress={pickPortfolioImage}
+                onPress={() => openGallery('portfolio')}
                 style={styles.addButton}
                 disabled={uploadingImage}
               >
@@ -483,7 +466,7 @@ export default function ProfileScreen() {
                 </Text>
                 <TouchableOpacity
                   style={styles.addPortfolioButton}
-                  onPress={pickPortfolioImage}
+                  onPress={() => openGallery('portfolio')}
                   disabled={uploadingImage}
                 >
                   <IconSymbol

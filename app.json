@@ -16,7 +16,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.anonymous.Natively",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "We need access to your photos to upload profile and portfolio images.",
+        "NSCameraUsageDescription": "We need access to your camera to take profile and portfolio photos."
       }
     },
     "android": {
@@ -34,7 +36,8 @@
     "plugins": [
       "expo-font",
       "expo-router",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-image-picker"
     ],
     "scheme": "Hub Specialist",
     "experiments": {
