@@ -17,7 +17,7 @@ export const colors = {
   error: '#EF4444',
   warning: '#F59E0B',
   success: '#10B981',
-  
+
   // Status colors
   statusNew: '#3B82F6',
   statusConfirmed: '#10B981',
@@ -32,6 +32,7 @@ export const spacing = {
   md: 16,
   lg: 24,
   xl: 32,
+  xxl: 48,
 };
 
 export const borderRadius = {

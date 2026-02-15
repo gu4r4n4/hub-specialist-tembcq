@@ -197,20 +197,39 @@ export default function HomeScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Image
-              source={require('@/assets/images/app-icon-mlt.png')}
-              style={styles.logoImage}
-              resizeMode="contain"
-            />
+            <View style={styles.logoIcon}>
+              <IconSymbol
+                ios_icon_name="cube.fill"
+                android_material_icon_name="widgets"
+                size={24}
+                color={colors.primary}
+              />
+            </View>
+            <Text style={styles.logoText}>HUB</Text>
           </View>
-          <TouchableOpacity onPress={handleSearch} style={styles.headerSearchButton}>
-            <IconSymbol
-              ios_icon_name="magnifyingglass"
-              android_material_icon_name="search"
-              size={24}
-              color={colors.text}
-            />
-          </TouchableOpacity>
+
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              onPress={() => console.log('Add listing pressed')}
+              style={styles.headerIconButton}
+            >
+              <IconSymbol
+                ios_icon_name="plus"
+                android_material_icon_name="add"
+                size={24}
+                color={colors.text}
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity onPress={handleSearch} style={styles.headerIconButton}>
+              <IconSymbol
+                ios_icon_name="magnifyingglass"
+                android_material_icon_name="search"
+                size={24}
+                color={colors.text}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.welcomeSection}>
@@ -468,11 +487,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
-  logoImage: {
-    width: 140,
-    height: 40,
+  logoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  headerSearchButton: {
+  logoText: {
+    ...typography.h2,
+    color: colors.text,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  headerIconButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -493,68 +528,7 @@ const styles = StyleSheet.create({
   subtitle: {
     ...typography.bodySecondary,
   },
-  searchContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-    gap: spacing.sm,
-  },
-  searchInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  searchIcon: {
-    marginRight: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    fontSize: 16,
-    color: colors.text,
-  },
-  searchButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.md,
-    justifyContent: 'center',
-  },
-  searchButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  authPrompt: {
-    backgroundColor: colors.card,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-    padding: spacing.lg,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  authPromptText: {
-    ...typography.body,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  authButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    borderRadius: borderRadius.md,
-  },
-  authButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+
   section: {
     marginBottom: spacing.lg,
   },
