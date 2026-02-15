@@ -25,21 +25,16 @@ security definer
 set search_path = public
 as $$
 declare
-  v_changed_by uuid;
+  v_changed_by_profile_id uuid;
 begin
   if new.status is distinct from old.status then
-    v_changed_by := auth.uid();
-
-    -- If auth.uid() isn't a profiles.id, store NULL to avoid FK violation
-    -- This handles cases where auth.uid() might be a user_id but not the profile PK
-    if v_changed_by is not null and not exists (
-      select 1 from public.profiles p where p.id = v_changed_by
-    ) then
-      v_changed_by := null;
-    end if;
+    -- Find the profile ID for the current authenticated user (who is a user_id)
+    select id into v_changed_by_profile_id 
+    from public.profiles 
+    where user_id = auth.uid();
 
     insert into public.order_status_history(order_id, old_status, new_status, changed_by)
-    values (new.id, old.status, new.status, v_changed_by);
+    values (new.id, old.status, new.status, v_changed_by_profile_id);
   end if;
 
   return new;
@@ -95,8 +90,9 @@ to authenticated
 using (
   exists (
     select 1 from public.orders o
+    join public.profiles p_current on (p_current.user_id = auth.uid())
     where o.id = order_status_history.order_id
-      and (o.consumer_profile_id = auth.uid() or o.specialist_profile_id = auth.uid())
+      and (o.consumer_profile_id = p_current.id or o.specialist_profile_id = p_current.id)
   )
 );
 
