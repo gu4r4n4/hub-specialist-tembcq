@@ -472,7 +472,46 @@ export default function AddListingScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
-          {renderStepIndicator()}
+          <View style={styles.stepIndicator}>
+            {Array.from({ length: totalSteps }).map((_, index) => {
+              const stepNumber = index + 1;
+              const isActive = stepNumber === currentStep;
+              const isCompleted = stepNumber < currentStep;
+
+              return (
+                <View key={stepNumber} style={styles.stepItem}>
+                  <View
+                    style={[
+                      styles.stepCircle,
+                      isActive && styles.stepCircleActive,
+                      isCompleted && styles.stepCircleCompleted,
+                    ]}
+                  >
+                    {isCompleted ? (
+                      <Text style={{ color: colors.background, fontSize: 14, fontWeight: 'bold' }}>✓</Text>
+                    ) : (
+                      <Text
+                        style={[
+                          styles.stepNumber,
+                          isActive && styles.stepNumberActive,
+                        ]}
+                      >
+                        {stepNumber}
+                      </Text>
+                    )}
+                  </View>
+                  {index < totalSteps - 1 && (
+                    <View
+                      style={[
+                        styles.stepLine,
+                        isCompleted && styles.stepLineCompleted,
+                      ]}
+                    />
+                  )}
+                </View>
+              );
+            })}
+          </View>
 
           <ScrollView
             style={styles.scrollView}
