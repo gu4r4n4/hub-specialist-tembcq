@@ -20,7 +20,6 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Category } from '@/types/database';
 
-type ListingType = 'hire' | 'service';
 
 export default function AddListingScreen() {
   const router = useRouter();
@@ -28,10 +27,9 @@ export default function AddListingScreen() {
 
   // Step tracking
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 5;
+  const totalSteps = 4;
 
   // Form data
-  const [listingType, setListingType] = useState<ListingType | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [location, setLocation] = useState('');
   const [priceEnabled, setPriceEnabled] = useState(false);
@@ -80,23 +78,19 @@ export default function AddListingScreen() {
     console.log('User tapped Next button, current step:', currentStep);
 
     // Validation for each step
-    if (currentStep === 1 && !listingType) {
-      setError('Please select a listing type');
-      return;
-    }
-    if (currentStep === 2 && !selectedCategory) {
+    if (currentStep === 1 && !selectedCategory) {
       setError('Please select a category');
       return;
     }
-    if (currentStep === 3 && !location.trim()) {
+    if (currentStep === 2 && !location.trim()) {
       setError('Please enter a location');
       return;
     }
-    if (currentStep === 4 && priceEnabled && !price.trim()) {
+    if (currentStep === 3 && priceEnabled && !price.trim()) {
       setError('Please enter a price or disable pricing');
       return;
     }
-    if (currentStep === 5 && (!title.trim() || !description.trim())) {
+    if (currentStep === 4 && (!title.trim() || !description.trim())) {
       setError('Please fill in all fields');
       return;
     }
@@ -130,11 +124,32 @@ export default function AddListingScreen() {
       return;
     }
 
-    console.log('User is logged in, submitting listing');
+    // Check if user has specialist role
+    if (profile.role !== 'specialist') {
+      console.log('User is not a specialist');
+      setError('Only specialists can create service listings. Please update your profile role.');
+      return;
+    }
+
+    console.log('User is logged in as specialist, submitting listing');
     setSubmitting(true);
     setError('');
 
     try {
+      // Update profile city if location was provided
+      if (location.trim()) {
+        console.log('Updating profile city to:', location);
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ city: location.trim() })
+          .eq('id', profile.id);
+
+        if (profileError) {
+          console.error('Error updating profile city:', profileError);
+          // Don't fail the whole operation, just log it
+        }
+      }
+
       const serviceData = {
         specialist_profile_id: profile.id,
         category_id: selectedCategory,
@@ -217,79 +232,6 @@ export default function AddListingScreen() {
     );
   };
 
-  const renderStep1 = () => {
-    const stepTitle = 'Select Listing Type';
-    const stepDescription = 'Are you looking to hire someone or offer a service?';
-
-    return (
-      <View style={styles.stepContent}>
-        <Text style={styles.stepTitle}>{stepTitle}</Text>
-        <Text style={styles.stepDescription}>{stepDescription}</Text>
-
-        <View style={styles.optionsContainer}>
-          <TouchableOpacity
-            style={[
-              styles.optionCard,
-              listingType === 'hire' && styles.optionCardSelected,
-            ]}
-            onPress={() => {
-              console.log('User selected: hire');
-              setListingType('hire');
-              setError('');
-            }}
-          >
-            <IconSymbol
-              android_material_icon_name="person-search"
-              ios_icon_name="person.crop.circle.badge.plus"
-              size={48}
-              color={listingType === 'hire' ? colors.primary : colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.optionTitle,
-                listingType === 'hire' && styles.optionTitleSelected,
-              ]}
-            >
-              Hire
-            </Text>
-            <Text style={styles.optionDescription}>
-              Looking for a specialist
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.optionCard,
-              listingType === 'service' && styles.optionCardSelected,
-            ]}
-            onPress={() => {
-              console.log('User selected: service');
-              setListingType('service');
-              setError('');
-            }}
-          >
-            <IconSymbol
-              android_material_icon_name="work"
-              ios_icon_name="briefcase.fill"
-              size={48}
-              color={listingType === 'service' ? colors.primary : colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.optionTitle,
-                listingType === 'service' && styles.optionTitleSelected,
-              ]}
-            >
-              Service
-            </Text>
-            <Text style={styles.optionDescription}>
-              Offering my services
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  };
 
   const renderStep2 = () => {
     const stepTitle = 'Select Category';
@@ -448,14 +390,12 @@ export default function AddListingScreen() {
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 1:
-        return renderStep1();
-      case 2:
         return renderStep2();
-      case 3:
+      case 2:
         return renderStep3();
-      case 4:
+      case 3:
         return renderStep4();
-      case 5:
+      case 4:
         return renderStep5();
       default:
         return null;
@@ -472,7 +412,46 @@ export default function AddListingScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
-          {renderStepIndicator()}
+          <View style={styles.stepIndicator}>
+            {Array.from({ length: totalSteps }).map((_, index) => {
+              const stepNumber = index + 1;
+              const isActive = stepNumber === currentStep;
+              const isCompleted = stepNumber < currentStep;
+
+              return (
+                <View key={stepNumber} style={styles.stepItem}>
+                  <View
+                    style={[
+                      styles.stepCircle,
+                      isActive && styles.stepCircleActive,
+                      isCompleted && styles.stepCircleCompleted,
+                    ]}
+                  >
+                    {isCompleted ? (
+                      <Text style={{ color: colors.background, fontSize: 14, fontWeight: 'bold' }}>✓</Text>
+                    ) : (
+                      <Text
+                        style={[
+                          styles.stepNumber,
+                          isActive && styles.stepNumberActive,
+                        ]}
+                      >
+                        {stepNumber}
+                      </Text>
+                    )}
+                  </View>
+                  {index < totalSteps - 1 && (
+                    <View
+                      style={[
+                        styles.stepLine,
+                        isCompleted && styles.stepLineCompleted,
+                      ]}
+                    />
+                  )}
+                </View>
+              );
+            })}
+          </View>
 
           <ScrollView
             style={styles.scrollView}
