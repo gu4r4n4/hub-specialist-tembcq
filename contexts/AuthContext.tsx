@@ -95,6 +95,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
       });
 
+      if (data.session) {
+        console.log('Session created immediately (email verification disabled)');
+        setSession(data.session);
+        setUser(data.session.user);
+      }
+
       if (error) {
         console.error('Signup error:', error);
         return { error };
