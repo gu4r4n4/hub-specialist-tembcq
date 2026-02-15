@@ -19,6 +19,12 @@ supabase db push
 ## Migration Files
 
 - `20260215_add_city_to_services.sql` - Adds `city` column to `services` table to store service location
+- `20260215_add_reviews_and_expiration.sql` - **Comprehensive migration** that adds:
+  - Service expiration functionality (`expires_at` column with indexes)
+  - Service reviews table (`service_reviews`) with RLS-first security
+  - Automated rating aggregation (triggers + SECURITY DEFINER functions)
+  - Booking protection against expired services
+  - 7-day edit/delete window for reviews
 
 ## Notes
 
