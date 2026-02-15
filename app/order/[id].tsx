@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Order, OrderStatus } from '@/types/database';
+import { Order, OrderStatus, OrderStatusHistory } from '@/types/database';
 import { IconSymbol } from '@/components/IconSymbol';
 
 export default function OrderDetailScreen() {
@@ -18,11 +18,16 @@ export default function OrderDetailScreen() {
   const [updating, setUpdating] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmAction, setConfirmAction] = useState<{ status: OrderStatus; label: string } | null>(null);
+  const [history, setHistory] = useState<OrderStatusHistory[]>([]);
+  const [canLeaveReview, setCanLeaveReview] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
 
   useEffect(() => {
     console.log('OrderDetailScreen: Loading order', id);
     loadOrder();
-  }, [id]);
+    loadHistory();
+    checkReviewEligibility();
+  }, [id, profile?.id]);
 
   const loadOrder = async () => {
     if (!isSupabaseConfigured || !id) {
@@ -50,6 +55,57 @@ export default function OrderDetailScreen() {
     }
   };
 
+  const loadHistory = async () => {
+    if (!isSupabaseConfigured || !id) {
+      setLoadingHistory(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('order_status_history')
+        .select('*')
+        .eq('order_id', id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading history:', error);
+      } else {
+        setHistory(data || []);
+      }
+    } catch (error) {
+      console.error('Exception loading history:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const checkReviewEligibility = async () => {
+    if (!isSupabaseConfigured || !id || !profile || profile.role !== 'consumer') {
+      setCanLeaveReview(false);
+      return;
+    }
+
+    try {
+      // Check if review already exists
+      const { data: existing } = await supabase
+        .from('service_reviews')
+        .select('id')
+        .eq('order_id', id)
+        .maybeSingle();
+
+      // We'll also need to check order status from the order state, 
+      // but since we call this in useEffect, it might be better to check it here too
+      // or rely on the order state if it's already loaded.
+      // For now, let's just check the DB for existing review.
+      // The status check will be done in the render condition.
+      setCanLeaveReview(!existing);
+    } catch (error) {
+      console.error('Error checking review eligibility:', error);
+      setCanLeaveReview(false);
+    }
+  };
+
   const handleStatusUpdate = async (newStatus: OrderStatus) => {
     console.log('Updating order status to:', newStatus);
     setUpdating(true);
@@ -66,6 +122,8 @@ export default function OrderDetailScreen() {
       } else {
         console.log('Order updated successfully');
         await loadOrder();
+        await loadHistory();
+        await checkReviewEligibility();
       }
     } catch (error) {
       console.error('Exception updating order:', error);
@@ -135,6 +193,12 @@ export default function OrderDetailScreen() {
   const canSpecialistStart = isSpecialist && order.status === 'confirmed';
   const canSpecialistComplete = isSpecialist && order.status === 'in_progress';
   const canSpecialistCancel = isSpecialist && order.status !== 'done' && order.status !== 'cancelled';
+  const isReviewEligible = canLeaveReview && order.status === 'done';
+
+  const getHistoryStatusLabel = (status: string | null) => {
+    if (!status) return 'Created';
+    return getStatusLabel(status);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -220,6 +284,45 @@ export default function OrderDetailScreen() {
             <Text style={styles.commentText}>{order.comment}</Text>
           </View>
         )}
+
+        {isReviewEligible && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.primary }]}
+              onPress={() => router.push(`/order/${order.id}/review`)}
+            >
+              <Text style={styles.actionButtonText}>Leave a Review</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Order Timeline</Text>
+          {loadingHistory ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : history.length === 0 ? (
+            <Text style={styles.infoText}>No history available</Text>
+          ) : (
+            <View style={styles.timelineContainer}>
+              {history.map((h: OrderStatusHistory, index: number) => (
+                <View key={h.id} style={styles.timelineItem}>
+                  <View style={styles.timelineLineContainer}>
+                    <View style={[styles.timelineDot, { backgroundColor: getStatusColor(h.new_status) }]} />
+                    {index < history.length - 1 && <View style={styles.timelineLine} />}
+                  </View>
+                  <View style={styles.timelineContent}>
+                    <Text style={styles.timelineStatus}>
+                      {getHistoryStatusLabel(h.new_status)}
+                    </Text>
+                    <Text style={styles.timelineTime}>
+                      {new Date(h.created_at).toLocaleString()}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
 
         {isSpecialist && (
           <View style={styles.actionsSection}>
@@ -477,5 +580,41 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  timelineContainer: {
+    marginTop: spacing.sm,
+  },
+  timelineItem: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    minHeight: 50,
+  },
+  timelineLineContainer: {
+    alignItems: 'center',
+    width: 20,
+  },
+  timelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    zIndex: 1,
+  },
+  timelineLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: colors.border,
+    marginVertical: -2,
+  },
+  timelineContent: {
+    flex: 1,
+    paddingBottom: spacing.lg,
+  },
+  timelineStatus: {
+    ...typography.body,
+    fontWeight: '600',
+  },
+  timelineTime: {
+    ...typography.bodySecondary,
+    fontSize: 12,
   },
 });

@@ -68,3 +68,12 @@ export interface SpecialistPortfolioImage {
   title: string | null;
   created_at: string;
 }
+
+export interface OrderStatusHistory {
+  id: string;
+  order_id: string;
+  old_status: OrderStatus | null;
+  new_status: OrderStatus;
+  changed_by: string;
+  created_at: string;
+}
