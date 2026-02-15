@@ -75,7 +75,7 @@ export default function HomeScreen() {
 
   const handleAddListing = () => {
     console.log('User tapped Add Listing button');
-    router.push('/add-listing');
+    router.push('/create-listing');
   };
 
   if (!isSupabaseConfigured) {
