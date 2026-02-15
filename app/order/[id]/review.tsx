@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, Alert, Keyboard } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
@@ -11,7 +11,8 @@ import { Order } from '@/types/database';
 
 export default function OrderReviewScreen() {
     const router = useRouter();
-    const { id } = useLocalSearchParams();
+    const { id: rawId } = useLocalSearchParams();
+    const id = Array.isArray(rawId) ? rawId[0] : rawId;
     const { profile } = useAuth();
 
     const [order, setOrder] = useState<Order | null>(null);
@@ -108,14 +109,20 @@ export default function OrderReviewScreen() {
             }
 
             console.log('Review submitted successfully');
+
+            // Close keyboard to avoid UI lock
+            Keyboard.dismiss();
+
             Alert.alert(
                 'Review Submitted',
                 'Thank you for your feedback! Your review has been saved.',
-                [{
-                    text: 'OK',
-                    onPress: () => router.replace('/(tabs)/orders')
-                }]
+                [{ text: 'OK' }]
             );
+
+            // Navigate outside the Alert callback to ensure it fires reliably
+            setTimeout(() => {
+                router.replace('/(tabs)/orders');
+            }, 100);
         } catch (error: any) {
             console.error('Error submitting review:', error);
             Alert.alert('Error', error.message || 'Failed to submit review. Please try again.');
