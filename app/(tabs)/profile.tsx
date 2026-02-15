@@ -209,6 +209,28 @@ export default function ProfileScreen() {
     }
   };
 
+  const getStoragePathFromPublicUrl = (publicUrl: string, bucket: string) => {
+    try {
+      // Example:
+      // https://xyz.supabase.co/storage/v1/object/public/portfolio/userId/123.jpg
+      const u = new URL(publicUrl);
+      const path = decodeURIComponent(u.pathname);
+
+      // Find ".../portfolio/<OBJECT_PATH>"
+      const marker = `/${bucket}/`;
+      const idx = path.lastIndexOf(marker);
+      if (idx === -1) return null;
+
+      return path.substring(idx + marker.length); // returns "<OBJECT_PATH>"
+    } catch {
+      // If it's not a valid URL for some reason, try fallback:
+      const marker = `/${bucket}/`;
+      const idx = publicUrl.lastIndexOf(marker);
+      if (idx === -1) return null;
+      return decodeURIComponent(publicUrl.substring(idx + marker.length));
+    }
+  };
+
   const handleDeletePortfolioImage = async (imageId: string, imageUrl: string) => {
     Alert.alert(
       'Delete Image',
@@ -220,7 +242,24 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              // 1. Delete from database
+              setUploadingImage(true);
+
+              // 1. Try to delete from storage (extract path from URL)
+              const storagePath = getStoragePathFromPublicUrl(imageUrl, 'portfolio');
+              if (storagePath) {
+                const { error: storageError } = await supabase.storage
+                  .from('portfolio')
+                  .remove([storagePath]);
+
+                if (storageError) {
+                  console.error('Storage delete error:', storageError);
+                  // Don't hard-fail; continue to DB delete if possible
+                }
+              } else {
+                console.warn('Could not parse storage path from URL:', imageUrl);
+              }
+
+              // 2. Delete from database
               const { error: dbError } = await supabase
                 .from('specialist_portfolio_images')
                 .delete()
@@ -228,23 +267,13 @@ export default function ProfileScreen() {
 
               if (dbError) throw dbError;
 
-              // 2. Try to delete from storage (extract path from URL)
-              try {
-                const pathParts = imageUrl.split('/portfolio/');
-                if (pathParts.length > 1) {
-                  const storagePath = pathParts[1];
-                  await supabase.storage.from('portfolio').remove([storagePath]);
-                }
-              } catch (storageErr) {
-                console.error('Error deleting from storage:', storageErr);
-                // Continue even if storage delete fails
-              }
-
               Alert.alert('Success', 'Image removed from portfolio');
-              fetchPortfolioImages();
+              await fetchPortfolioImages();
             } catch (error: any) {
-              console.error('Error deleting image:', error);
-              Alert.alert('Error', error.message || 'Failed to delete image');
+              console.error('Delete failed:', error);
+              Alert.alert('Error', error?.message || 'Failed to delete image');
+            } finally {
+              setUploadingImage(false);
             }
           }
         },
@@ -485,31 +514,31 @@ export default function ProfileScreen() {
             ) : (
               <View style={styles.portfolioGrid}>
                 {portfolioImages.map((image) => (
-                  <TouchableOpacity
-                    key={image.id}
-                    style={styles.portfolioItem}
-                    onLongPress={() => handleDeletePortfolioImage(image.id, image.image_url)}
-                    activeOpacity={0.8}
-                  >
+                  <View key={image.id} style={styles.portfolioItem}>
                     <Image
                       source={{ uri: image.image_url }}
                       style={styles.portfolioImage}
                       resizeMode="cover"
                     />
-                    <View style={styles.deleteIndicator}>
+                    <TouchableOpacity
+                      style={styles.deleteIndicator}
+                      onPress={() => handleDeletePortfolioImage(image.id, image.image_url)}
+                      activeOpacity={0.8}
+                      disabled={uploadingImage}
+                    >
                       <IconSymbol
                         ios_icon_name="trash"
                         android_material_icon_name="delete"
                         size={12}
                         color="#FFFFFF"
                       />
-                    </View>
+                    </TouchableOpacity>
                     {image.title && (
                       <Text style={styles.portfolioImageTitle} numberOfLines={1}>
                         {image.title}
                       </Text>
                     )}
-                  </TouchableOpacity>
+                  </View>
                 ))}
               </View>
             )}
