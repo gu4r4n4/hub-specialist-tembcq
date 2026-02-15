@@ -108,9 +108,14 @@ export default function OrderReviewScreen() {
             }
 
             console.log('Review submitted successfully');
-            Alert.alert('Success', 'Thank you for your review!', [
-                { text: 'OK', onPress: () => router.back() }
-            ]);
+            Alert.alert(
+                'Review Submitted',
+                'Thank you for your feedback! Your review has been saved.',
+                [{
+                    text: 'OK',
+                    onPress: () => router.replace('/(tabs)/orders')
+                }]
+            );
         } catch (error: any) {
             console.error('Error submitting review:', error);
             Alert.alert('Error', error.message || 'Failed to submit review. Please try again.');

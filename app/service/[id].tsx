@@ -495,43 +495,37 @@ export default function ServiceDetailScreen() {
           <Text style={styles.description}>{service.description}</Text>
         </View>
 
-        {/* Rating Breakdown */}
-        {(breakdownLoading || ratingBreakdown.length > 0 || service.rating_count > 0) && (
+        {/* Rating Breakdown - only show if there are actual ratings */}
+        {!breakdownLoading && (ratingBreakdown.length > 0 || service.rating_count > 0) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Rating Breakdown</Text>
-            {breakdownLoading ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : ratingBreakdown.length === 0 ? (
-              <Text style={styles.description}>No ratings yet</Text>
-            ) : (
-              <View style={styles.breakdownContainer}>
-                {(() => {
-                  const total = breakdownTotal || service.rating_count || 0;
+            <View style={styles.breakdownContainer}>
+              {(() => {
+                const total = breakdownTotal || service.rating_count || 0;
 
-                  return [5, 4, 3, 2, 1].map((rating) => {
-                    const emoji = rating === 5 ? '🔥' : rating === 4 ? '❤️' : rating === 3 ? '🙂' : rating === 2 ? '🤡' : '💩';
-                    const ratingData = ratingBreakdown.find((r: RatingBreakdown) => r.rating === rating);
-                    const rawCount = ratingData?.count ?? 0;
-                    const parsedCount = typeof rawCount === 'string' ? Number(rawCount) : rawCount;
-                    const count = Number.isFinite(parsedCount) ? parsedCount : 0;
+                return [5, 4, 3, 2, 1].map((rating) => {
+                  const emoji = rating === 5 ? '🔥' : rating === 4 ? '❤️' : rating === 3 ? '🙂' : rating === 2 ? '🤡' : '💩';
+                  const ratingData = ratingBreakdown.find((r: RatingBreakdown) => r.rating === rating);
+                  const rawCount = ratingData?.count ?? 0;
+                  const parsedCount = typeof rawCount === 'string' ? Number(rawCount) : rawCount;
+                  const count = Number.isFinite(parsedCount) ? parsedCount : 0;
 
-                    const percentage = total > 0 ? (count / total) * 100 : 0;
-                    const safePct = Math.min(100, Math.max(0, Number.isFinite(percentage) ? percentage : 0));
+                  const percentage = total > 0 ? (count / total) * 100 : 0;
+                  const safePct = Math.min(100, Math.max(0, Number.isFinite(percentage) ? percentage : 0));
 
-                    return (
-                      <View key={rating} style={styles.breakdownRow}>
-                        <Text style={styles.breakdownEmoji}>{emoji}</Text>
-                        <Text style={styles.breakdownRating}>{rating}</Text>
-                        <View style={styles.breakdownBarContainer}>
-                          <View style={[styles.breakdownBarFill, { width: `${safePct}%` }]} />
-                        </View>
-                        <Text style={styles.breakdownCount}>{count}</Text>
+                  return (
+                    <View key={rating} style={styles.breakdownRow}>
+                      <Text style={styles.breakdownEmoji}>{emoji}</Text>
+                      <Text style={styles.breakdownRating}>{rating}</Text>
+                      <View style={styles.breakdownBarContainer}>
+                        <View style={[styles.breakdownBarFill, { width: `${safePct}%` }]} />
                       </View>
-                    );
-                  });
-                })()}
-              </View>
-            )}
+                      <Text style={styles.breakdownCount}>{count}</Text>
+                    </View>
+                  );
+                });
+              })()}
+            </View>
           </View>
         )}
 
