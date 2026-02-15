@@ -35,7 +35,7 @@ export default function ServicesScreen() {
 
     try {
       const categoriesResult = await supabase.from('categories').select('*').order('display_order', { ascending: true, nullsFirst: false });
-      
+
       let servicesQuery = supabase
         .from('services')
         .select('*, specialist:profiles!specialist_profile_id(*), category:categories(*)')
@@ -209,12 +209,11 @@ export default function ServicesScreen() {
                   >
                     <View style={styles.serviceHeader}>
                       <Text style={styles.serviceTitle}>{service.title}</Text>
-                      <Text style={styles.servicePrice}>{priceText}</Text>
                     </View>
                     <Text style={styles.serviceDescription} numberOfLines={2}>
                       {service.description}
                     </Text>
-                    
+
                     {/* Specialist Summary Row */}
                     <View style={styles.specialistSummary}>
                       <IconSymbol

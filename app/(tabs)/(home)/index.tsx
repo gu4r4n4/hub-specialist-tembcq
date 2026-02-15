@@ -196,7 +196,6 @@ export default function HomeScreen() {
                       <Text style={styles.serviceTitle} numberOfLines={1}>
                         {service.title}
                       </Text>
-                      <Text style={styles.servicePrice}>{priceText}</Text>
                     </View>
 
                     <Text style={styles.serviceDescription} numberOfLines={2}>
