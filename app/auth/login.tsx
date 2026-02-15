@@ -5,12 +5,12 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
-import { authClient } from '@/lib/auth-client';
+
 import { IconSymbol } from '@/components/IconSymbol';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -18,7 +18,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     console.log('User tapped Login button');
-    
+
     if (!email || !password) {
       setError('Please fill in all fields');
       return;
@@ -45,11 +45,16 @@ export default function LoginScreen() {
     setError('');
 
     try {
-      await authClient.signIn.social({
-        provider: 'google',
-        callbackURL: '/(tabs)/(home)',
-      });
-      console.log('Google sign-in initiated');
+      const { error } = await signInWithGoogle();
+
+      if (error) {
+        console.error('Google sign-in failed:', error);
+        setError(error.message || 'Google sign-in failed. Please try again.');
+        setLoading(false);
+      } else {
+        console.log('Google Google sign-in initiated successfully');
+        // The redirects will happen automatically, or we wait for session change
+      }
     } catch (err: any) {
       console.error('Google sign-in failed:', err);
       setError(err.message || 'Google sign-in failed. Please try again.');

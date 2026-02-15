@@ -19,7 +19,7 @@ export const supabase = createClient(
       storage: AsyncStorage,
       autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: false,
+      detectSessionInUrl: false, // We handle this manually in AuthContext for deep linking
     },
   }
 );
