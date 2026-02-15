@@ -7,8 +7,16 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { supabase } from '@/lib/supabase';
 
 export default function SearchScreen() {
-    console.log('SearchScreen: Rendered');
     const router = useRouter();
+
+    // Safety check: if router isn't available, we can't do much.
+    // However, we'll log it instead of returning null to avoid blank screens
+    // if it's just a transient state.
+    if (!router) {
+        console.warn('SearchScreen: Router not yet available');
+    }
+
+    console.log('SearchScreen: Rendering');
     const [location, setLocation] = useState('');
     const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
     const [categoriesLoading, setCategoriesLoading] = useState(false);
@@ -53,12 +61,16 @@ export default function SearchScreen() {
 
             if (error) throw error;
 
-            if (data) {
-                const uniqueCities = [...new Set(data.map(item => item.city).filter(Boolean))].sort();
-                setCities(uniqueCities as string[]);
+            if (data && data.length > 0) {
+                const uniqueCitiesMap = data.reduce((acc: { [key: string]: boolean }, item) => {
+                    if (item.city) acc[item.city] = true;
+                    return acc;
+                }, {});
+                const uniqueCities = Object.keys(uniqueCitiesMap).sort();
+                setCities(uniqueCities);
             }
         } catch (err) {
-            console.error('Error fetching cities:', err);
+            console.error('SearchScreen: Error fetching cities:', err);
         } finally {
             setLoadingCities(false);
         }
@@ -193,7 +205,7 @@ export default function SearchScreen() {
                     style={styles.modalOverlay}
                     onPress={() => setShowLocationModal(false)}
                 >
-                    <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+                    <Pressable style={styles.modalContent} onPress={() => { /* Do nothing, just capture press */ }}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Select Location</Text>
                             <TouchableOpacity
@@ -302,7 +314,7 @@ export default function SearchScreen() {
                     style={styles.modalOverlay}
                     onPress={() => setShowCategoryModal(false)}
                 >
-                    <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+                    <Pressable style={styles.modalContent} onPress={() => { /* Do nothing, just capture press */ }}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Select Category</Text>
                             <TouchableOpacity
