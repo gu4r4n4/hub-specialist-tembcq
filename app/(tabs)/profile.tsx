@@ -11,6 +11,7 @@ import { Service, SpecialistPortfolioImage } from '@/types/database';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { Keyboard } from 'react-native';
+import { decode } from 'base64-arraybuffer';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -154,22 +155,17 @@ export default function ProfileScreen() {
         encoding: FileSystem.EncodingType.Base64,
       });
 
-      const byteCharacters = atob(base64);
-      const byteNumbers = new Array(byteCharacters.length);
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
+      const arrayBuffer = decode(base64);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
-        .upload(fileName, byteArray, {
+        .upload(fileName, arrayBuffer, {
           contentType,
           upsert: true,
         });
 
       if (uploadError) {
-        console.error('Supabase storage upload error:', uploadError);
+        console.error('Supabase storage upload error detail:', JSON.stringify(uploadError, null, 2));
         throw uploadError;
       }
 
@@ -181,10 +177,10 @@ export default function ProfileScreen() {
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ avatar_url: publicUrl })
-          .eq('user_id', user.id);
+          .eq('id', profile.id); // More robust mapping to the specific profile record
 
         if (updateError) {
-          console.error('Profile update error:', updateError);
+          console.error('Profile update error detail:', JSON.stringify(updateError, null, 2));
           throw updateError;
         }
 
