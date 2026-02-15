@@ -9,6 +9,8 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { supabase } from '@/lib/supabase';
 import { Service, SpecialistPortfolioImage } from '@/types/database';
 import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import { Keyboard } from 'react-native';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -130,26 +132,46 @@ export default function ProfileScreen() {
   };
 
   const handleSaveImage = async () => {
-    if (!selectedImage || !profile) return;
+    if (!selectedImage || !profile || !user) return;
 
+    // Close keyboard and modal first for better UX
+    Keyboard.dismiss();
+    setShowPreviewModal(false);
     setUploadingImage(true);
+
     try {
       console.log('Starting upload for:', previewType);
-      const response = await fetch(selectedImage);
-      const blob = await response.blob();
-      const fileExt = selectedImage.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `${profile.id}/${Date.now()}.${fileExt}`;
+
+      const fileExt = (selectedImage.split('.').pop() || 'jpg').toLowerCase();
+      const contentType = fileExt === 'png' ? 'image/png' : 'image/jpeg';
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
       const bucket = previewType === 'profile' ? 'avatars' : 'portfolio';
+
+      console.log('Upload details:', { bucket, fileName, contentType });
+
+      // Robust upload using Base64 for RN/Expo compatibility
+      const base64 = await FileSystem.readAsStringAsync(selectedImage, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const byteCharacters = atob(base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
-        .upload(fileName, blob, {
-          contentType: `image/${fileExt}`,
-          cacheControl: '3600',
+        .upload(fileName, byteArray, {
+          contentType,
           upsert: true,
         });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Supabase storage upload error:', uploadError);
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from(bucket)
@@ -159,11 +181,13 @@ export default function ProfileScreen() {
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ avatar_url: publicUrl })
-          .eq('id', profile.id);
+          .eq('user_id', user.id);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Profile update error:', updateError);
+          throw updateError;
+        }
 
-        // Refresh the profile in AuthContext to update the UI globally
         await refreshProfile();
       } else {
         const { error: insertError } = await supabase
@@ -174,22 +198,26 @@ export default function ProfileScreen() {
             sort_order: portfolioImages.length,
           });
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Portfolio insert error:', insertError);
+          throw insertError;
+        }
+
         fetchPortfolioImages();
-        // Also refresh profile to ensure all state is consistent
         await refreshProfile();
       }
 
-      setShowPreviewModal(false);
       setSelectedImage(null);
       Alert.alert('Success', `${previewType === 'profile' ? 'Profile picture' : 'Portfolio image'} saved successfully`);
     } catch (error: any) {
-      console.error('Error uploading image:', error);
+      console.error('Error in handleSaveImage:', error);
       let msg = error.message || 'An error occurred during upload.';
       if (msg.includes('bucket not found')) {
-        msg = 'Storage bucket not found. Please create "avatars" and "portfolio" buckets in Supabase dashboard.';
+        msg = 'Storage bucket not found. Please ensure "avatars" and "portfolio" buckets exist in your Supabase dashboard.';
       }
       Alert.alert('Upload Failed', msg);
+      // Re-open modal if it failed so user can try again
+      setShowPreviewModal(true);
     } finally {
       setUploadingImage(false);
     }
