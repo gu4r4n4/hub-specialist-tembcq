@@ -205,7 +205,10 @@ export default function SearchScreen() {
                     style={styles.modalOverlay}
                     onPress={() => setShowLocationModal(false)}
                 >
-                    <Pressable style={styles.modalContent} onPress={() => { /* Do nothing, just capture press */ }}>
+                    <Pressable
+                        style={styles.modalContent}
+                        onStartShouldSetResponder={() => true}
+                    >
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Select Location</Text>
                             <TouchableOpacity
@@ -314,7 +317,10 @@ export default function SearchScreen() {
                     style={styles.modalOverlay}
                     onPress={() => setShowCategoryModal(false)}
                 >
-                    <Pressable style={styles.modalContent} onPress={() => { /* Do nothing, just capture press */ }}>
+                    <Pressable
+                        style={styles.modalContent}
+                        onStartShouldSetResponder={() => true}
+                    >
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Select Category</Text>
                             <TouchableOpacity
