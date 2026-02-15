@@ -15,7 +15,6 @@ export default function ServicesScreen() {
   const [services, setServices] = useState<Service[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState((params.search as string) || '');
   const [selectedCategory, setSelectedCategory] = useState<string | null>((params.category as string) || null);
 
   const categoriesData = useMemo(() => {
@@ -45,8 +44,8 @@ export default function ServicesScreen() {
         servicesQuery = servicesQuery.eq('category_id', selectedCategory);
       }
 
-      if (searchQuery) {
-        servicesQuery = servicesQuery.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+      if (params.search) {
+        servicesQuery = servicesQuery.or(`title.ilike.%${params.search}%,description.ilike.%${params.search}%`);
       }
 
       const servicesResult = await servicesQuery.order('rating_avg', { ascending: false });
@@ -67,8 +66,8 @@ export default function ServicesScreen() {
   };
 
   const handleSearch = () => {
-    console.log('User searched for:', searchQuery);
-    loadData();
+    console.log('User tapped search');
+    router.push('/search');
   };
 
   const handleServicePress = (serviceId: string) => {
@@ -90,29 +89,13 @@ export default function ServicesScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Services</Text>
-      </View>
-
-      <View style={styles.searchContainer}>
-        <View style={styles.searchInputContainer}>
-          <IconSymbol
-            ios_icon_name="magnifyingglass"
-            android_material_icon_name="search"
-            size={20}
-            color={colors.textSecondary}
-            style={styles.searchIcon}
-          />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search services..."
-            placeholderTextColor={colors.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            onSubmitEditing={handleSearch}
-            returnKeyType="search"
-          />
-        </View>
         <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-          <Text style={styles.searchButtonText}>Search</Text>
+          <IconSymbol
+            android_material_icon_name="search"
+            ios_icon_name="magnifyingglass"
+            size={24}
+            color={colors.text}
+          />
         </TouchableOpacity>
       </View>
 
@@ -265,47 +248,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    padding: spacing.lg,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
     paddingTop: 48,
+    paddingBottom: spacing.md,
   },
   title: {
     ...typography.h1,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  searchInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  searchIcon: {
-    marginRight: spacing.sm,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: spacing.md,
-    fontSize: 16,
     color: colors.text,
   },
   searchButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.md,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.card,
     justifyContent: 'center',
-  },
-  searchButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   // Fixed-height wrapper prevents the horizontal categories row from creating
   // a tall invisible touch area that blocks vertical scrolling.
