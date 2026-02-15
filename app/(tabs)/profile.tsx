@@ -569,24 +569,34 @@ export default function ProfileScreen() {
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={styles.modalButtonCancel}
+                style={[styles.modalBtn, styles.modalBtnSecondary]}
                 onPress={() => {
                   setShowPreviewModal(false);
                   setSelectedImage(null);
+                  setSelectedBase64(null);
                 }}
                 disabled={uploadingImage}
+                activeOpacity={0.85}
               >
-                <Text style={styles.modalButtonCancelText}>Cancel</Text>
+                <Text style={styles.modalBtnSecondaryText}>Cancel</Text>
               </TouchableOpacity>
+
               <TouchableOpacity
-                style={[styles.modalButtonConfirm, { backgroundColor: colors.primary }]}
+                style={[
+                  styles.modalBtn,
+                  styles.modalBtnPrimary,
+                  uploadingImage && styles.modalBtnDisabled,
+                ]}
                 onPress={handleSaveImage}
                 disabled={uploadingImage}
+                activeOpacity={0.85}
               >
                 {uploadingImage ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.modalButtonConfirmText}>Save</Text>
+                  <Text style={styles.modalBtnPrimaryText}>
+                    {previewType === 'profile' ? 'Save Photo' : 'Save to Portfolio'}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -871,32 +881,42 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     gap: spacing.sm,
+    width: '100%',
+    marginTop: spacing.md,
   },
-  modalButtonCancel: {
+  modalBtn: {
     flex: 1,
-    backgroundColor: 'transparent',
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  modalBtnSecondary: {
+    backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: colors.border,
   },
-  modalButtonCancelText: {
+  modalBtnSecondaryText: {
     ...typography.body,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  modalButtonConfirm: {
-    flex: 1,
+  modalBtnPrimary: {
     backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 3,
   },
-  modalButtonConfirmText: {
+  modalBtnPrimaryText: {
+    ...typography.body,
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '800',
+  },
+  modalBtnDisabled: {
+    opacity: 0.6,
   },
   avatarImage: {
     width: 80,
@@ -989,9 +1009,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     borderRadius: borderRadius.lg,
     padding: spacing.xl,
-    width: '90%',
-    maxWidth: 400,
+    width: '92%',
+    maxWidth: 420,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
