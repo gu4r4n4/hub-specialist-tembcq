@@ -466,13 +466,7 @@ export default function AddListingScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          title: 'Add Listing',
-          headerBackTitle: 'Back',
-        }}
-      />
+
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
