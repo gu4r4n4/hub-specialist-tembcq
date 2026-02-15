@@ -36,7 +36,7 @@ const STEPS: OnboardingStep[] = [
     {
         id: '1',
         type: 'intro',
-        title: 'Welcome to Hub Specialist',
+        title: 'Your Home Services Hub',
         description: 'Your trusted marketplace connecting homeowners with verified local professionals for all your service needs.',
         icon: 'house.circle.fill',
         materialIcon: 'home',
@@ -44,7 +44,7 @@ const STEPS: OnboardingStep[] = [
     {
         id: '2',
         type: 'intro',
-        title: 'Find Trusted Specialists',
+        title: 'Verified Professionals',
         description: 'Browse hundreds of verified professionals. From plumbers to electricians, cleaners to handymen - we\'ve got you covered.',
         icon: 'person.2.circle.fill',
         materialIcon: 'people',
@@ -52,7 +52,7 @@ const STEPS: OnboardingStep[] = [
     {
         id: '3',
         type: 'intro',
-        title: 'Book with Confidence',
+        title: 'Trusted by Thousands',
         description: 'Read reviews, compare prices, and book services instantly. All specialists are verified and rated by real customers.',
         icon: 'checkmark.seal.fill',
         materialIcon: 'verified',
@@ -60,7 +60,7 @@ const STEPS: OnboardingStep[] = [
     {
         id: '4',
         type: 'location',
-        title: 'Select Your Location',
+        title: 'Choose Your City',
         description: 'Choose your city to see services available in your area. You can always change this later in settings.',
         icon: 'map.circle.fill',
         materialIcon: 'location-on',
