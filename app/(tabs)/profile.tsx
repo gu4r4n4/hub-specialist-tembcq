@@ -23,6 +23,7 @@ export default function ProfileScreen() {
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedBase64, setSelectedBase64] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewType, setPreviewType] = useState<'profile' | 'portfolio'>('profile');
 
@@ -115,6 +116,7 @@ export default function ProfileScreen() {
         allowsEditing: true,
         aspect: type === 'profile' ? [1, 1] : undefined,
         quality: 0.8,
+        base64: true,
       };
 
       const result = useCamera
@@ -123,6 +125,7 @@ export default function ProfileScreen() {
 
       if (!result.canceled && result.assets[0]) {
         setSelectedImage(result.assets[0].uri);
+        setSelectedBase64(result.assets[0].base64 || null);
         setPreviewType(type);
         setShowPreviewModal(true);
       }
@@ -150,12 +153,11 @@ export default function ProfileScreen() {
 
       console.log('Upload details:', { bucket, fileName, contentType });
 
-      // Robust upload using Base64 for RN/Expo compatibility
-      const base64 = await FileSystem.readAsStringAsync(selectedImage, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      if (!selectedBase64) {
+        throw new Error('No base64 data returned from image picker');
+      }
 
-      const arrayBuffer = decode(base64);
+      const arrayBuffer = decode(selectedBase64);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
@@ -204,6 +206,7 @@ export default function ProfileScreen() {
       }
 
       setSelectedImage(null);
+      setSelectedBase64(null);
       Alert.alert('Success', `${previewType === 'profile' ? 'Profile picture' : 'Portfolio image'} saved successfully`);
     } catch (error: any) {
       console.error('Error in handleSaveImage:', error);

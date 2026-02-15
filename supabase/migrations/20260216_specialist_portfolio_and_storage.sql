@@ -78,29 +78,30 @@ drop policy if exists "Specialists can upload portfolio images" on storage.objec
 drop policy if exists "Specialists can update their own portfolio images" on storage.objects;
 drop policy if exists "Specialists can delete their own portfolio images" on storage.objects;
 
--- CREATE Storage policies
+-- NEW policies based on auth.uid() folder structure
+drop policy if exists "avatars insert own folder" on storage.objects;
+drop policy if exists "avatars update own folder" on storage.objects;
+drop policy if exists "portfolio insert own folder" on storage.objects;
+drop policy if exists "portfolio update own folder" on storage.objects;
+drop policy if exists "portfolio delete own folder" on storage.objects;
 
 -- -- Avatars
 create policy "Avatar images are publicly accessible"
   on storage.objects for select
   using (bucket_id = 'avatars');
 
-create policy "Users can upload their own avatar"
+create policy "avatars insert own folder"
   on storage.objects for insert
   with check (
     bucket_id = 'avatars' AND
-    (storage.foldername(name))[1] in (
-      select id::text from public.profiles where user_id = auth.uid()
-    )
+    (storage.foldername(name))[1] = auth.uid()::text
   );
 
-create policy "Users can update their own avatar"
+create policy "avatars update own folder"
   on storage.objects for update
   using (
     bucket_id = 'avatars' AND
-    (storage.foldername(name))[1] in (
-      select id::text from public.profiles where user_id = auth.uid()
-    )
+    (storage.foldername(name))[1] = auth.uid()::text
   );
 
 -- -- Portfolio
@@ -108,29 +109,23 @@ create policy "Portfolio images are publicly accessible"
   on storage.objects for select
   using (bucket_id = 'portfolio');
 
-create policy "Specialists can upload portfolio images"
+create policy "portfolio insert own folder"
   on storage.objects for insert
   with check (
     bucket_id = 'portfolio' AND
-    (storage.foldername(name))[1] in (
-      select id::text from public.profiles where user_id = auth.uid() and role = 'specialist'
-    )
+    (storage.foldername(name))[1] = auth.uid()::text
   );
 
-create policy "Specialists can update their own portfolio images"
+create policy "portfolio update own folder"
   on storage.objects for update
   using (
     bucket_id = 'portfolio' AND
-    (storage.foldername(name))[1] in (
-      select id::text from public.profiles where user_id = auth.uid()
-    )
+    (storage.foldername(name))[1] = auth.uid()::text
   );
 
-create policy "Specialists can delete their own portfolio images"
+create policy "portfolio delete own folder"
   on storage.objects for delete
   using (
     bucket_id = 'portfolio' AND
-    (storage.foldername(name))[1] in (
-      select id::text from public.profiles where user_id = auth.uid()
-    )
+    (storage.foldername(name))[1] = auth.uid()::text
   );
