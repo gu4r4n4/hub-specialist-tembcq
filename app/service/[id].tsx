@@ -456,6 +456,7 @@ export default function ServiceDetailScreen() {
 
   const specialistName = service.specialist?.full_name || 'Unknown';
   const categoryName = service.category?.name || 'Uncategorized';
+  const isZeroPrice = !service.price || Number(service.price) === 0;
   const priceText = `${service.currency} ${service.price.toFixed(2)}`;
   const ratingText = service.rating_count > 0 ? `${service.rating_avg.toFixed(1)} (${service.rating_count} reviews)` : 'No ratings yet';
 
@@ -469,7 +470,9 @@ export default function ServiceDetailScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text style={styles.title}>{service.title}</Text>
-          <Text style={styles.price}>{priceText}</Text>
+          {!isZeroPrice && (
+            <Text style={styles.price}>{priceText}</Text>
+          )}
         </View>
 
         <View style={styles.infoRow}>
