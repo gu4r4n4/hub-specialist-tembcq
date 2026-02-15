@@ -133,25 +133,25 @@ export default function HomeScreen() {
             contentContainerStyle={styles.categoriesContainer}
           >
             {categories.map((category) => {
-              const icons = getCategoryIcons(category);
+              const icons = getCategoryIcons(category.name);
               const materialIconName = normalizeMaterialIconName(icons.icon_material);
               const categoryColor = category.color || colors.primary;
 
               return (
                 <TouchableOpacity
                   key={category.id}
-                  style={styles.categoryCard}
+                  style={[styles.categoryCard, { borderColor: categoryColor }]}
                   onPress={() => handleCategoryPress(category.id)}
                 >
-                  <View style={[styles.categoryIcon, { backgroundColor: `${categoryColor}20` }]}>
+                  <View style={[styles.categoryIcon, { backgroundColor: categoryColor }]}>
                     <IconSymbol
-                      android_material_icon_name={materialIconName}
+                      android_material_icon_name={materialIconName as any}
                       ios_icon_name={icons.icon_sf}
-                      size={32}
-                      color={categoryColor}
+                      size={28}
+                      color="#FFFFFF"
                     />
                   </View>
-                  <Text style={styles.categoryName}>{category.name}</Text>
+                  <Text style={styles.categoryName} numberOfLines={2}>{category.name}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -179,12 +179,12 @@ export default function HomeScreen() {
           ) : (
             <View style={styles.servicesGrid}>
               {featuredServices.map((service) => {
-                const specialist = service.specialist;
-                const specialistName = specialist?.full_name || 'Unknown';
-                const specialistAvatar = specialist?.avatar_url;
+                const specialistName = service.specialist?.full_name || 'Unknown';
+                const categoryName = service.category?.name || 'Uncategorized';
                 const ratingAvg = service.rating_avg || 0;
                 const ratingCount = service.rating_count || 0;
-                const priceDisplay = service.price > 0 ? `${service.currency} ${service.price}` : 'Price on request';
+                const priceText = `${service.currency} ${service.price.toFixed(2)}`;
+                const ratingText = ratingCount > 0 ? `${ratingAvg.toFixed(1)} (${ratingCount})` : 'No ratings';
 
                 return (
                   <TouchableOpacity
@@ -193,50 +193,48 @@ export default function HomeScreen() {
                     onPress={() => handleServicePress(service.id)}
                   >
                     <View style={styles.serviceHeader}>
-                      <Text style={styles.serviceTitle} numberOfLines={2}>
+                      <Text style={styles.serviceTitle} numberOfLines={1}>
                         {service.title}
                       </Text>
-                      <Text style={styles.servicePrice}>{priceDisplay}</Text>
+                      <Text style={styles.servicePrice}>{priceText}</Text>
                     </View>
 
                     <Text style={styles.serviceDescription} numberOfLines={2}>
                       {service.description}
                     </Text>
 
-                    <View style={styles.serviceFooter}>
+                    {/* Specialist Summary Row (Matching Services Tab) */}
+                    <View style={styles.specialistSummary}>
+                      <IconSymbol
+                        ios_icon_name="person.circle.fill"
+                        android_material_icon_name="account-circle"
+                        size={32}
+                        color={colors.primary}
+                      />
                       <View style={styles.specialistInfo}>
-                        {specialistAvatar ? (
-                          <Image
-                            source={{ uri: specialistAvatar }}
-                            style={styles.specialistAvatar}
-                          />
-                        ) : (
-                          <View style={styles.specialistAvatarPlaceholder}>
-                            <IconSymbol
-                              android_material_icon_name="person"
-                              ios_icon_name="person.fill"
-                              size={16}
-                              color={colors.textSecondary}
-                            />
-                          </View>
-                        )}
-                        <Text style={styles.specialistName} numberOfLines={1}>
-                          {specialistName}
-                        </Text>
-                      </View>
-
-                      {ratingCount > 0 && (
+                        <Text style={styles.specialistName}>{specialistName}</Text>
                         <View style={styles.ratingContainer}>
                           <IconSymbol
-                            android_material_icon_name="star"
                             ios_icon_name="star.fill"
+                            android_material_icon_name="star"
                             size={14}
                             color={colors.warning}
                           />
-                          <Text style={styles.ratingText}>{ratingAvg.toFixed(1)}</Text>
-                          <Text style={styles.ratingCount}>({ratingCount})</Text>
+                          <Text style={styles.ratingText}>{ratingText}</Text>
                         </View>
-                      )}
+                      </View>
+                    </View>
+
+                    <View style={styles.serviceFooter}>
+                      <View style={styles.serviceInfo}>
+                        <IconSymbol
+                          ios_icon_name="tag.fill"
+                          android_material_icon_name="label"
+                          size={16}
+                          color={colors.textSecondary}
+                        />
+                        <Text style={styles.serviceInfoText}>{categoryName}</Text>
+                      </View>
                     </View>
                   </TouchableOpacity>
                 );
@@ -248,14 +246,15 @@ export default function HomeScreen() {
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Floating Action Button */}
-      <TouchableOpacity style={styles.fab} onPress={handleAddListing}>
+      {/* Floating Action Button - Modern "List Service" Pill */}
+      <TouchableOpacity style={styles.fabExtended} onPress={handleAddListing}>
         <IconSymbol
           android_material_icon_name="add"
           ios_icon_name="plus"
-          size={28}
-          color={colors.background}
+          size={24}
+          color="#FFFFFF"
         />
+        <Text style={styles.fabText}>List Service</Text>
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -345,21 +344,27 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     alignItems: 'center',
-    width: 80,
+    width: 100,
+    marginRight: spacing.md,
+    backgroundColor: colors.card,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 2,
+    borderColor: colors.border,
   },
   categoryIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: spacing.sm,
   },
   categoryName: {
-    fontSize: 12,
-    color: colors.text,
+    ...typography.caption,
+    fontWeight: '600',
     textAlign: 'center',
-    fontWeight: '500',
+    color: colors.text,
   },
   servicesGrid: {
     paddingHorizontal: spacing.lg,
@@ -407,21 +412,6 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: spacing.sm,
   },
-  specialistAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginRight: spacing.xs,
-  },
-  specialistAvatarPlaceholder: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.xs,
-  },
   specialistName: {
     fontSize: 14,
     color: colors.text,
@@ -438,10 +428,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.text,
   },
-  ratingCount: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -452,20 +438,44 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: spacing.md,
   },
-  fab: {
+  fabExtended: {
     position: 'absolute',
     right: spacing.lg,
     bottom: 100,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
     backgroundColor: colors.primary,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.full,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 8,
+    gap: spacing.sm,
+  },
+  fabText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  specialistSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.sm,
+  },
+  serviceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  serviceInfoText: {
+    ...typography.caption,
   },
 });
