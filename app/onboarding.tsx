@@ -10,7 +10,6 @@ import {
     NativeSyntheticEvent,
     NativeScrollEvent,
     ActivityIndicator,
-    Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,7 +22,7 @@ const { width } = Dimensions.get('window');
 
 type OnboardingStep = {
     id: string;
-    type: 'intro' | 'location' | 'outro';
+    type: 'intro' | 'intent' | 'location' | 'outro';
     title: string;
     description: string;
     icon?: string;
@@ -41,6 +40,14 @@ const STEPS: OnboardingStep[] = [
     },
     {
         id: '2',
+        type: 'intent',
+        title: 'What brings you here?',
+        description: 'Choose how you want to use the app initially.',
+        icon: 'person.2.circle.fill',
+        materialIcon: 'people',
+    },
+    {
+        id: '3',
         type: 'location',
         title: 'Select Your Location',
         description: 'Find services available in your area. You can always change this later.',
@@ -48,7 +55,7 @@ const STEPS: OnboardingStep[] = [
         materialIcon: 'location-on',
     },
     {
-        id: '3',
+        id: '4',
         type: 'outro',
         title: 'You\'re All Set',
         description: 'Ready to discover customized services tailored just for you.',
@@ -61,9 +68,14 @@ export default function OnboardingScreen() {
     const router = useRouter();
     const [currentIndex, setCurrentIndex] = useState(0);
     const flatListRef = useRef<FlatList>(null);
+
+    // State for Location Step
     const [locations, setLocations] = useState<string[]>([]);
     const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
     const [loadingLocations, setLoadingLocations] = useState(false);
+
+    // State for Intent Step
+    const [selectedIntent, setSelectedIntent] = useState<'hire' | 'work' | null>(null);
 
     useEffect(() => {
         fetchLocations();
@@ -74,8 +86,6 @@ export default function OnboardingScreen() {
 
         setLoadingLocations(true);
         try {
-            // Fetch cities from profiles that have active services
-            // We join services with specialist(profile) and select the city
             const { data, error } = await supabase
                 .from('services')
                 .select(`
@@ -86,15 +96,12 @@ export default function OnboardingScreen() {
             if (error) throw error;
 
             if (data) {
-                // Extract unique cities (filtering out nulls/undefined)
                 const cities = new Set<string>();
                 data.forEach((item: any) => {
                     if (item.specialist?.city) {
                         cities.add(item.specialist.city);
                     }
                 });
-
-                // Convert to array and sort
                 setLocations(Array.from(cities).sort());
             }
         } catch (err) {
@@ -107,12 +114,17 @@ export default function OnboardingScreen() {
     const handleFinish = async () => {
         try {
             await AsyncStorage.setItem('onboarding_seen', 'true');
+
             if (selectedLocation) {
                 await AsyncStorage.setItem('user_location_preference', selectedLocation);
             } else {
                 await AsyncStorage.removeItem('user_location_preference');
             }
-            // Navigate to home logic is handled by the root layout redirect usually, but here we explicitly push
+
+            if (selectedIntent) {
+                await AsyncStorage.setItem('user_intent_preference', selectedIntent);
+            }
+
             router.replace('/(tabs)/(home)');
         } catch (error) {
             console.error('Error saving onboarding status:', error);
@@ -120,30 +132,28 @@ export default function OnboardingScreen() {
     };
 
     const handleNext = () => {
-        if (currentIndex < STEPS.length - 1) {
-            flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
+        const nextIndex = currentIndex + 1;
+        if (nextIndex < STEPS.length) {
+            flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+            setCurrentIndex(nextIndex);
         } else {
             handleFinish();
         }
     };
 
     const handleSkip = () => {
-        // Skip implies "Show All" / No preference
-        setSelectedLocation(null);
         handleFinish();
     };
 
     const toggleLocation = (loc: string) => {
-        if (selectedLocation === loc) {
-            setSelectedLocation(null);
-        } else {
-            setSelectedLocation(loc);
-        }
+        setSelectedLocation(prev => prev === loc ? null : loc);
     };
 
     const onMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
         const index = Math.round(event.nativeEvent.contentOffset.x / width);
-        setCurrentIndex(index);
+        if (index !== currentIndex) {
+            setCurrentIndex(index);
+        }
     };
 
     const renderIntroOutro = (item: OnboardingStep) => (
@@ -158,6 +168,57 @@ export default function OnboardingScreen() {
             </View>
             <Text style={styles.title}>{item.title}</Text>
             <Text style={styles.description}>{item.description}</Text>
+        </View>
+    );
+
+    const renderIntentSelect = (item: OnboardingStep) => (
+        <View style={styles.contentContainer}>
+            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.description}>{item.description}</Text>
+
+            <View style={styles.intentsContainer}>
+                <TouchableOpacity
+                    style={[
+                        styles.intentCard,
+                        selectedIntent === 'hire' && styles.intentCardSelected
+                    ]}
+                    onPress={() => setSelectedIntent('hire')}
+                >
+                    <IconSymbol
+                        ios_icon_name="magnifyingglass.circle.fill"
+                        android_material_icon_name="search"
+                        size={48}
+                        color={selectedIntent === 'hire' ? colors.primary : colors.textSecondary}
+                    />
+                    <Text style={[
+                        styles.intentText,
+                        selectedIntent === 'hire' && styles.intentTextSelected
+                    ]}>
+                        I want to Hire
+                    </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[
+                        styles.intentCard,
+                        selectedIntent === 'work' && styles.intentCardSelected
+                    ]}
+                    onPress={() => setSelectedIntent('work')}
+                >
+                    <IconSymbol
+                        ios_icon_name="briefcase.circle.fill"
+                        android_material_icon_name="work"
+                        size={48}
+                        color={selectedIntent === 'work' ? colors.primary : colors.textSecondary}
+                    />
+                    <Text style={[
+                        styles.intentText,
+                        selectedIntent === 'work' && styles.intentTextSelected
+                    ]}>
+                        I want to Work
+                    </Text>
+                </TouchableOpacity>
+            </View>
         </View>
     );
 
@@ -224,7 +285,12 @@ export default function OnboardingScreen() {
     const renderItem = ({ item }: { item: OnboardingStep }) => {
         return (
             <View style={styles.slide}>
-                {item.type === 'location' ? renderLocationSelect(item) : renderIntroOutro(item)}
+                {item.type === 'intent'
+                    ? renderIntentSelect(item)
+                    : item.type === 'location'
+                        ? renderLocationSelect(item)
+                        : renderIntroOutro(item)
+                }
             </View>
         );
     };
@@ -248,7 +314,7 @@ export default function OnboardingScreen() {
                 keyExtractor={(item) => item.id}
                 style={styles.list}
                 scrollEnabled={true}
-                extraData={{ selectedLocation, locations, loadingLocations }}
+                extraData={{ selectedLocation, locations, loadingLocations, selectedIntent }}
             />
 
             <View style={styles.footer}>
@@ -327,6 +393,33 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         lineHeight: 24,
         marginBottom: spacing.xl,
+    },
+    intentsContainer: {
+        width: '100%',
+        gap: spacing.md,
+        paddingHorizontal: spacing.md,
+    },
+    intentCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.card,
+        padding: spacing.lg,
+        borderRadius: borderRadius.lg,
+        borderWidth: 2,
+        borderColor: colors.border,
+        gap: spacing.md,
+    },
+    intentCardSelected: {
+        borderColor: colors.primary,
+        backgroundColor: colors.primary + '10', // 10% opacity hex
+    },
+    intentText: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: colors.text,
+    },
+    intentTextSelected: {
+        color: colors.primary,
     },
     locationsContainer: {
         width: '100%',
