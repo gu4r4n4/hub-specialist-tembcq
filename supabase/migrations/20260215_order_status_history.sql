@@ -24,10 +24,22 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  v_changed_by uuid;
 begin
   if new.status is distinct from old.status then
+    v_changed_by := auth.uid();
+
+    -- If auth.uid() isn't a profiles.id, store NULL to avoid FK violation
+    -- This handles cases where auth.uid() might be a user_id but not the profile PK
+    if v_changed_by is not null and not exists (
+      select 1 from public.profiles p where p.id = v_changed_by
+    ) then
+      v_changed_by := null;
+    end if;
+
     insert into public.order_status_history(order_id, old_status, new_status, changed_by)
-    values (new.id, old.status, new.status, auth.uid());
+    values (new.id, old.status, new.status, v_changed_by);
   end if;
 
   return new;
@@ -49,8 +61,9 @@ security definer
 set search_path = public
 as $$
 begin
+  -- Use consumer_profile_id as the creator to guarantee FK validity during booking
   insert into public.order_status_history(order_id, old_status, new_status, changed_by, created_at)
-  values (new.id, null, new.status, auth.uid(), now());
+  values (new.id, null, new.status, new.consumer_profile_id, now());
   return new;
 end;
 $$;
