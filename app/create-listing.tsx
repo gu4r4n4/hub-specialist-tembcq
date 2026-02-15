@@ -305,7 +305,7 @@ export default function AddListingScreen() {
         ) : (
           <ScrollView style={styles.categoriesScroll} showsVerticalScrollIndicator={false}>
             <View style={styles.categoriesGrid}>
-              {categories.map((category) => {
+              {categories.map((category: Category) => {
                 const isSelected = selectedCategory === category.id;
 
                 return (
