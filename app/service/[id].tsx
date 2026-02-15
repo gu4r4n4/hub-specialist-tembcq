@@ -496,7 +496,7 @@ export default function ServiceDetailScreen() {
         </View>
 
         {/* Rating Breakdown - only show if there are actual ratings */}
-        {!breakdownLoading && service.rating_count > 0 && (
+        {!breakdownLoading && (breakdownTotal || 0) > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Rating Breakdown</Text>
             <View style={styles.breakdownContainer}>
