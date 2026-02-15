@@ -190,6 +190,10 @@ export default function ProfileScreen() {
 
       setSelectedImage(null);
       setSelectedBase64(null);
+
+      // Navigate to profile tab to see latest data
+      router.replace('/(tabs)/profile');
+
       Alert.alert('Success', `${previewType === 'profile' ? 'Profile picture' : 'Portfolio image'} saved successfully`);
     } catch (error: any) {
       console.error('Error in handleSaveImage:', error);
@@ -870,18 +874,21 @@ const styles = StyleSheet.create({
   },
   modalButtonCancel: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: 'transparent',
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalButtonCancelText: {
     ...typography.body,
+    color: colors.textSecondary,
     fontWeight: '600',
   },
   modalButtonConfirm: {
     flex: 1,
-    backgroundColor: colors.error,
+    backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
     alignItems: 'center',
