@@ -582,7 +582,7 @@ export default function ProfileScreen() {
                 {uploadingImage ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.modalButtonConfirmText}>Save & Upload</Text>
+                  <Text style={styles.modalButtonConfirmText}>Save</Text>
                 )}
               </TouchableOpacity>
             </View>
