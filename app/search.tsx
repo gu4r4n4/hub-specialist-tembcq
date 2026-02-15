@@ -52,8 +52,10 @@ export default function SearchScreen() {
 
             if (error) throw error;
 
-            const uniqueCities = [...new Set(data.map(item => item.city).filter(Boolean))].sort();
-            setCities(uniqueCities as string[]);
+            if (data) {
+                const uniqueCities = [...new Set(data.map(item => item.city).filter(Boolean))].sort();
+                setCities(uniqueCities as string[]);
+            }
         } catch (err) {
             console.error('Error fetching cities:', err);
         } finally {
