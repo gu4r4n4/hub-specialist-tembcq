@@ -70,7 +70,7 @@ const STEPS: OnboardingStep[] = [
 export default function OnboardingScreen() {
     const router = useRouter();
     const [currentIndex, setCurrentIndex] = useState(0);
-    const flatListRef = useRef<FlatList>(null);
+    const flatListRef = useRef<FlatList<OnboardingStep>>(null);
 
     // State for Location Step
     const [cities, setCities] = useState<string[]>([]);
@@ -126,7 +126,6 @@ export default function OnboardingScreen() {
         const nextIndex = currentIndex + 1;
         if (nextIndex < STEPS.length) {
             flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-            setCurrentIndex(nextIndex);
         } else {
             handleFinish();
         }
@@ -243,6 +242,20 @@ export default function OnboardingScreen() {
                 style={styles.list}
                 scrollEnabled={true}
                 extraData={{ selectedLocation, cities, loadingCities }}
+                getItemLayout={(_, index) => ({
+                    length: width,
+                    offset: width * index,
+                    index,
+                })}
+                onScrollToIndexFailed={(info) => {
+                    flatListRef.current?.scrollToOffset({
+                        offset: info.averageItemLength * info.index,
+                        animated: true,
+                    });
+                    setTimeout(() => {
+                        flatListRef.current?.scrollToIndex({ index: info.index, animated: true });
+                    }, 50);
+                }}
             />
 
             <View style={styles.footer}>
