@@ -414,7 +414,7 @@ export default function AddListingScreen() {
           style={styles.keyboardView}
         >
           <View style={styles.stepIndicator}>
-            {Array.from({ length: totalSteps }).map((_, index) => {
+            {Array.from({ length: totalSteps }).map((_: unknown, index: number) => {
               const stepNumber = index + 1;
               const isActive = stepNumber === currentStep;
               const isCompleted = stepNumber < currentStep;
