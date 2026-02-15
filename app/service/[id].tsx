@@ -155,26 +155,44 @@ export default function ServiceDetailScreen() {
 
   // Check if current user can review this service
   const checkReviewEligibility = async () => {
-    if (!isSupabaseConfigured || !profile || profile.role !== 'consumer') {
+    if (!isSupabaseConfigured) {
+      setCanReview(false);
+      return;
+    }
+
+    // Must be logged in
+    if (!user || !profile) {
+      setCanReview(false);
+      return;
+    }
+
+    // Must be consumer
+    if (profile.role !== 'consumer') {
+      setCanReview(false);
+      return;
+    }
+
+    // Must have a valid service ID (string)
+    if (!id || typeof id !== 'string') {
       setCanReview(false);
       return;
     }
 
     try {
-      // Check if user has completed orders for this service
-      const { data: orders, error: ordersError } = await supabase
+      // Check completed orders
+      const { data: orders, error } = await supabase
         .from('orders')
         .select('id')
         .eq('service_id', id)
         .eq('consumer_profile_id', profile.id)
         .eq('status', 'done');
 
-      if (ordersError || !orders || orders.length === 0) {
+      if (error || !orders || orders.length === 0) {
         setCanReview(false);
         return;
       }
 
-      // Check if review already exists for any of those orders
+      // Check if review already exists for those orders
       const orderIds = orders.map(o => o.id);
 
       const { data: existingReviews } = await supabase
@@ -182,9 +200,13 @@ export default function ServiceDetailScreen() {
         .select('order_id')
         .in('order_id', orderIds);
 
-      setCanReview(!existingReviews || existingReviews.length === 0);
-    } catch (error) {
-      console.error('Error checking review eligibility:', error);
+      const alreadyReviewed =
+        existingReviews && existingReviews.length > 0;
+
+      setCanReview(!alreadyReviewed);
+
+    } catch (err) {
+      console.error('Eligibility error:', err);
       setCanReview(false);
     }
   };
@@ -334,7 +356,12 @@ export default function ServiceDetailScreen() {
         .select()
         .single();
 
-      if (reviewError) throw reviewError;
+      if (reviewError) {
+        if (reviewError.message?.includes('row-level security')) {
+          throw new Error('You can only review after completing an order.');
+        }
+        throw reviewError;
+      }
 
       // 4. Upload images if any
       const uploadedPaths: string[] = [];
