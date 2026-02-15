@@ -82,12 +82,7 @@ export default function OnboardingScreen() {
     };
 
     const handleNext = () => {
-        const nextIndex = currentIndex + 1;
-        if (nextIndex < STEPS.length) {
-            flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-        } else {
-            handleFinish();
-        }
+        handleFinish();
     };
 
     const handleSkip = () => {
@@ -154,22 +149,8 @@ export default function OnboardingScreen() {
             />
 
             <View style={styles.footer}>
-                <View style={styles.pagination}>
-                    {STEPS.map((_, index) => (
-                        <View
-                            key={index}
-                            style={[
-                                styles.dot,
-                                currentIndex === index && styles.activeDot,
-                            ]}
-                        />
-                    ))}
-                </View>
-
-                <TouchableOpacity style={styles.button} onPress={handleNext}>
-                    <Text style={styles.buttonText}>
-                        {currentIndex === STEPS.length - 1 ? 'Get Started' : 'Next'}
-                    </Text>
+                <TouchableOpacity style={styles.button} onPress={handleFinish}>
+                    <Text style={styles.buttonText}>Get Started</Text>
                 </TouchableOpacity>
             </View>
         </SafeAreaView>
