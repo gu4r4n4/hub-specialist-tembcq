@@ -19,6 +19,9 @@ export default function ProfileScreen() {
   const [portfolioImages, setPortfolioImages] = useState<SpecialistPortfolioImage[]>([]);
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [previewType, setPreviewType] = useState<'profile' | 'portfolio'>('profile');
 
   const handleSignOut = async () => {
     console.log('User confirmed sign out');
@@ -70,60 +73,164 @@ export default function ProfileScreen() {
   };
 
   const pickProfileImage = async () => {
+    Alert.alert(
+      'Profile Picture',
+      'Choose a source',
+      [
+        { text: 'Camera', onPress: () => handleLaunchImagePicker('profile', true) },
+        { text: 'Gallery', onPress: () => handleLaunchImagePicker('profile', false) },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const pickPortfolioImage = async () => {
+    Alert.alert(
+      'Portfolio Image',
+      'Choose a source',
+      [
+        { text: 'Camera', onPress: () => handleLaunchImagePicker('portfolio', true) },
+        { text: 'Gallery', onPress: () => handleLaunchImagePicker('portfolio', false) },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const handleLaunchImagePicker = async (type: 'profile' | 'portfolio', useCamera: boolean) => {
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const permissionResult = useCamera
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'Please allow access to your photo library to upload a profile picture.');
+        Alert.alert('Permission Required', `Please allow access to your ${useCamera ? 'camera' : 'photo library'}.`);
         return;
       }
 
-      const result = await ImagePicker.launchImageLibraryAsync({
+      const options: ImagePicker.ImagePickerOptions = {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
-        aspect: [1, 1],
+        aspect: type === 'profile' ? [1, 1] : undefined,
         quality: 0.8,
-      });
+      };
+
+      const result = useCamera
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options);
 
       if (!result.canceled && result.assets[0]) {
-        setUploadingImage(true);
-        // For now, just show alert - actual upload would require Supabase storage setup
-        Alert.alert('Coming Soon', 'Profile image upload will be available soon!');
-        setUploadingImage(false);
+        setSelectedImage(result.assets[0].uri);
+        setPreviewType(type);
+        setShowPreviewModal(true);
       }
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const handleSaveImage = async () => {
+    if (!selectedImage || !profile) return;
+
+    setUploadingImage(true);
+    try {
+      console.log('Starting upload for:', previewType);
+      const response = await fetch(selectedImage);
+      const blob = await response.blob();
+      const fileExt = selectedImage.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${profile.id}/${Date.now()}.${fileExt}`;
+      const bucket = previewType === 'profile' ? 'avatars' : 'portfolio';
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from(bucket)
+        .upload(fileName, blob, {
+          contentType: `image/${fileExt}`,
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(fileName);
+
+      if (previewType === 'profile') {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update({ avatar_url: publicUrl })
+          .eq('id', profile.id);
+
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('specialist_portfolio_images')
+          .insert({
+            specialist_profile_id: profile.id,
+            image_url: publicUrl,
+            sort_order: portfolioImages.length,
+          });
+
+        if (insertError) throw insertError;
+        fetchPortfolioImages();
+      }
+
+      setShowPreviewModal(false);
+      setSelectedImage(null);
+      Alert.alert('Success', `${previewType === 'profile' ? 'Profile picture' : 'Portfolio image'} saved successfully`);
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      let msg = error.message || 'An error occurred during upload.';
+      if (msg.includes('bucket not found')) {
+        msg = 'Storage bucket not found. Please create "avatars" and "portfolio" buckets in Supabase dashboard.';
+      }
+      Alert.alert('Upload Failed', msg);
+    } finally {
       setUploadingImage(false);
     }
   };
 
-  const pickPortfolioImage = async () => {
-    try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const handleDeletePortfolioImage = async (imageId: string, imageUrl: string) => {
+    Alert.alert(
+      'Delete Image',
+      'Are you sure you want to remove this image from your portfolio?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // 1. Delete from database
+              const { error: dbError } = await supabase
+                .from('specialist_portfolio_images')
+                .delete()
+                .eq('id', imageId);
 
-      if (!permissionResult.granted) {
-        Alert.alert('Permission Required', 'Please allow access to your photo library to upload portfolio images.');
-        return;
-      }
+              if (dbError) throw dbError;
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.8,
-      });
+              // 2. Try to delete from storage (extract path from URL)
+              try {
+                const pathParts = imageUrl.split('/portfolio/');
+                if (pathParts.length > 1) {
+                  const storagePath = pathParts[1];
+                  await supabase.storage.from('portfolio').remove([storagePath]);
+                }
+              } catch (storageErr) {
+                console.error('Error deleting from storage:', storageErr);
+                // Continue even if storage delete fails
+              }
 
-      if (!result.canceled && result.assets[0]) {
-        setUploadingImage(true);
-        // For now, just show alert - actual upload would require Supabase storage setup
-        Alert.alert('Coming Soon', 'Portfolio image upload will be available soon!');
-        setUploadingImage(false);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
-      setUploadingImage(false);
-    }
+              Alert.alert('Success', 'Image removed from portfolio');
+              fetchPortfolioImages();
+            } catch (error: any) {
+              console.error('Error deleting image:', error);
+              Alert.alert('Error', error.message || 'Failed to delete image');
+            }
+          }
+        },
+      ]
+    );
   };
 
   useEffect(() => {
@@ -359,18 +466,31 @@ export default function ProfileScreen() {
             ) : (
               <View style={styles.portfolioGrid}>
                 {portfolioImages.map((image) => (
-                  <View key={image.id} style={styles.portfolioItem}>
+                  <TouchableOpacity
+                    key={image.id}
+                    style={styles.portfolioItem}
+                    onLongPress={() => handleDeletePortfolioImage(image.id, image.image_url)}
+                    activeOpacity={0.8}
+                  >
                     <Image
                       source={{ uri: image.image_url }}
                       style={styles.portfolioImage}
                       resizeMode="cover"
                     />
+                    <View style={styles.deleteIndicator}>
+                      <IconSymbol
+                        ios_icon_name="trash"
+                        android_material_icon_name="delete"
+                        size={12}
+                        color="#FFFFFF"
+                      />
+                    </View>
                     {image.title && (
                       <Text style={styles.portfolioImageTitle} numberOfLines={1}>
                         {image.title}
                       </Text>
                     )}
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
@@ -397,6 +517,63 @@ export default function ProfileScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      <Modal
+        visible={showPreviewModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          if (!uploadingImage) {
+            setShowPreviewModal(false);
+            setSelectedImage(null);
+          }
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.previewModalContent}>
+            <Text style={styles.modalTitle}>
+              {previewType === 'profile' ? 'Profile Picture' : 'Portfolio Image'}
+            </Text>
+            <Text style={styles.modalText}>
+              Do you want to save this photo?
+            </Text>
+
+            <View style={styles.previewImageContainer}>
+              {selectedImage && (
+                <Image
+                  source={{ uri: selectedImage }}
+                  style={previewType === 'profile' ? styles.previewAvatar : styles.previewPortfolio}
+                  resizeMode="cover"
+                />
+              )}
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButtonCancel}
+                onPress={() => {
+                  setShowPreviewModal(false);
+                  setSelectedImage(null);
+                }}
+                disabled={uploadingImage}
+              >
+                <Text style={styles.modalButtonCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButtonConfirm, { backgroundColor: colors.primary }]}
+                onPress={handleSaveImage}
+                disabled={uploadingImage}
+              >
+                {uploadingImage ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalButtonConfirmText}>Save & Upload</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         visible={showSignOutModal}
@@ -785,5 +962,50 @@ const styles = StyleSheet.create({
     padding: spacing.xs,
     color: '#FFFFFF',
     fontSize: 12,
+  },
+  previewModalContent: {
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  previewImageContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    marginVertical: spacing.lg,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  previewAvatar: {
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+  },
+  previewPortfolio: {
+    width: '100%',
+    height: '100%',
+  },
+  deleteIndicator: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    backgroundColor: 'rgba(255, 0, 0, 0.6)',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
