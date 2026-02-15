@@ -211,27 +211,31 @@ export default function ProfileScreen() {
 
   const getStoragePathFromPublicUrl = (publicUrl: string, bucket: string) => {
     try {
-      // Example:
-      // https://xyz.supabase.co/storage/v1/object/public/portfolio/userId/123.jpg
       const u = new URL(publicUrl);
       const path = decodeURIComponent(u.pathname);
 
-      // Find ".../portfolio/<OBJECT_PATH>"
-      const marker = `/${bucket}/`;
-      const idx = path.lastIndexOf(marker);
-      if (idx === -1) return null;
+      // Supabase public URL format:
+      // /storage/v1/object/public/{bucket}/{objectPath}
+      const marker1 = `/storage/v1/object/public/${bucket}/`;
+      const i1 = path.indexOf(marker1);
+      if (i1 !== -1) return path.slice(i1 + marker1.length);
 
-      return path.substring(idx + marker.length); // returns "<OBJECT_PATH>"
+      // Fallback if URL is not the canonical public format
+      const marker2 = `/${bucket}/`;
+      const i2 = path.lastIndexOf(marker2);
+      if (i2 !== -1) return path.slice(i2 + marker2.length);
+
+      return null;
     } catch {
-      // If it's not a valid URL for some reason, try fallback:
+      // final fallback for non-URL strings
       const marker = `/${bucket}/`;
       const idx = publicUrl.lastIndexOf(marker);
       if (idx === -1) return null;
-      return decodeURIComponent(publicUrl.substring(idx + marker.length));
+      return decodeURIComponent(publicUrl.slice(idx + marker.length));
     }
   };
 
-  const handleDeletePortfolioImage = async (imageId: string, imageUrl: string) => {
+  const handleDeletePortfolioImage = (imageId: string, imageUrl: string) => {
     Alert.alert(
       'Delete Image',
       'Are you sure you want to remove this image from your portfolio?',
@@ -241,10 +245,27 @@ export default function ProfileScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            try {
-              setUploadingImage(true);
+            if (!user || !profile) return;
 
-              // 1. Try to delete from storage (extract path from URL)
+            setUploadingImage(true);
+
+            // ✅ Optimistic UI: remove immediately
+            setPortfolioImages(prev => prev.filter(img => img.id !== imageId));
+
+            try {
+              // 1) Delete DB row FIRST (so UI is correct even if storage fails)
+              const { error: dbError } = await supabase
+                .from('specialist_portfolio_images')
+                .delete()
+                .eq('id', imageId);
+
+              if (dbError) {
+                // rollback optimistic UI if DB delete fails
+                await fetchPortfolioImages();
+                throw dbError;
+              }
+
+              // 2) Delete from Storage (best effort)
               const storagePath = getStoragePathFromPublicUrl(imageUrl, 'portfolio');
               if (storagePath) {
                 const { error: storageError } = await supabase.storage
@@ -252,30 +273,28 @@ export default function ProfileScreen() {
                   .remove([storagePath]);
 
                 if (storageError) {
-                  console.error('Storage delete error:', storageError);
-                  // Don't hard-fail; continue to DB delete if possible
+                  // Don’t fail the whole delete if storage is blocked — DB is already clean
+                  console.warn('Storage delete failed (DB row deleted):', storageError);
                 }
               } else {
-                console.warn('Could not parse storage path from URL:', imageUrl);
+                console.warn('Could not parse storage path from image_url:', imageUrl);
               }
 
-              // 2. Delete from database
-              const { error: dbError } = await supabase
-                .from('specialist_portfolio_images')
-                .delete()
-                .eq('id', imageId);
+              // 3) Force “fresh data”
+              await refreshProfile();
+              await fetchPortfolioImages();
 
-              if (dbError) throw dbError;
+              // 4) Force profile tab rerender (important: replace same route with param)
+              router.replace({ pathname: '/(tabs)/profile', params: { t: String(Date.now()) } });
 
               Alert.alert('Success', 'Image removed from portfolio');
-              await fetchPortfolioImages();
-            } catch (error: any) {
-              console.error('Delete failed:', error);
-              Alert.alert('Error', error?.message || 'Failed to delete image');
+            } catch (e: any) {
+              console.error('Delete failed:', e);
+              Alert.alert('Error', e?.message || 'Failed to delete image');
             } finally {
               setUploadingImage(false);
             }
-          }
+          },
         },
       ]
     );
@@ -1074,5 +1093,7 @@ const styles = StyleSheet.create({
     height: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
+    elevation: 10,
   },
 });
