@@ -10,6 +10,9 @@ import {
     NativeSyntheticEvent,
     NativeScrollEvent,
     ActivityIndicator,
+    Modal,
+    Pressable,
+    ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,34 +36,34 @@ const STEPS: OnboardingStep[] = [
     {
         id: '1',
         type: 'intro',
-        title: 'Find Trusted Specialists',
-        description: 'Connect with verified professionals for all your home service needs.',
-        icon: 'magnifyingglass.circle.fill',
-        materialIcon: 'search',
+        title: 'Welcome to Hub Specialist',
+        description: 'Your trusted marketplace connecting homeowners with verified local professionals for all your service needs.',
+        icon: 'house.circle.fill',
+        materialIcon: 'home',
     },
     {
         id: '2',
-        type: 'intent',
-        title: 'What brings you here?',
-        description: 'Choose how you want to use the app initially.',
+        type: 'intro',
+        title: 'Find Trusted Specialists',
+        description: 'Browse hundreds of verified professionals. From plumbers to electricians, cleaners to handymen - we\'ve got you covered.',
         icon: 'person.2.circle.fill',
         materialIcon: 'people',
     },
     {
         id: '3',
-        type: 'location',
-        title: 'Select Your Location',
-        description: 'Find services available in your area. You can always change this later.',
-        icon: 'map.circle.fill',
-        materialIcon: 'location-on',
+        type: 'intro',
+        title: 'Book with Confidence',
+        description: 'Read reviews, compare prices, and book services instantly. All specialists are verified and rated by real customers.',
+        icon: 'checkmark.seal.fill',
+        materialIcon: 'verified',
     },
     {
         id: '4',
-        type: 'outro',
-        title: 'You\'re All Set',
-        description: 'Ready to discover customized services tailored just for you.',
-        icon: 'checkmark.circle.fill',
-        materialIcon: 'check-circle',
+        type: 'location',
+        title: 'Select Your Location',
+        description: 'Choose your city to see services available in your area. You can always change this later in settings.',
+        icon: 'map.circle.fill',
+        materialIcon: 'location-on',
     },
 ];
 
@@ -70,44 +73,36 @@ export default function OnboardingScreen() {
     const flatListRef = useRef<FlatList>(null);
 
     // State for Location Step
-    const [locations, setLocations] = useState<string[]>([]);
-    const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
-    const [loadingLocations, setLoadingLocations] = useState(false);
-
-    // State for Intent Step
-    const [selectedIntent, setSelectedIntent] = useState<'hire' | 'work' | null>(null);
+    const [cities, setCities] = useState<string[]>([]);
+    const [selectedLocation, setSelectedLocation] = useState<string>('');
+    const [loadingCities, setLoadingCities] = useState(false);
+    const [showLocationModal, setShowLocationModal] = useState(false);
 
     useEffect(() => {
-        fetchLocations();
+        fetchCities();
     }, []);
 
-    const fetchLocations = async () => {
+    const fetchCities = async () => {
         if (!isSupabaseConfigured) return;
 
-        setLoadingLocations(true);
+        setLoadingCities(true);
         try {
             const { data, error } = await supabase
                 .from('services')
-                .select(`
-                    specialist:profiles!specialist_profile_id(city)
-                `)
+                .select('city')
+                .not('city', 'is', null)
                 .eq('is_active', true);
 
             if (error) throw error;
 
             if (data) {
-                const cities = new Set<string>();
-                data.forEach((item: any) => {
-                    if (item.specialist?.city) {
-                        cities.add(item.specialist.city);
-                    }
-                });
-                setLocations(Array.from(cities).sort());
+                const uniqueCities = [...new Set(data.map(item => item.city).filter(Boolean))].sort();
+                setCities(uniqueCities as string[]);
             }
         } catch (err) {
-            console.error('Error fetching locations:', err);
+            console.error('Error fetching cities:', err);
         } finally {
-            setLoadingLocations(false);
+            setLoadingCities(false);
         }
     };
 
@@ -119,10 +114,6 @@ export default function OnboardingScreen() {
                 await AsyncStorage.setItem('user_location_preference', selectedLocation);
             } else {
                 await AsyncStorage.removeItem('user_location_preference');
-            }
-
-            if (selectedIntent) {
-                await AsyncStorage.setItem('user_intent_preference', selectedIntent);
             }
 
             router.replace('/(tabs)/(home)');
@@ -145,8 +136,9 @@ export default function OnboardingScreen() {
         handleFinish();
     };
 
-    const toggleLocation = (loc: string) => {
-        setSelectedLocation(prev => prev === loc ? null : loc);
+    const selectLocation = (city: string) => {
+        setSelectedLocation(city);
+        setShowLocationModal(false);
     };
 
     const onMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -171,113 +163,51 @@ export default function OnboardingScreen() {
         </View>
     );
 
-    const renderIntentSelect = (item: OnboardingStep) => (
-        <View style={styles.contentContainer}>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.description}>{item.description}</Text>
-
-            <View style={styles.intentsContainer}>
-                <TouchableOpacity
-                    style={[
-                        styles.intentCard,
-                        selectedIntent === 'hire' && styles.intentCardSelected
-                    ]}
-                    onPress={() => setSelectedIntent('hire')}
-                >
-                    <IconSymbol
-                        ios_icon_name="magnifyingglass.circle.fill"
-                        android_material_icon_name="search"
-                        size={48}
-                        color={selectedIntent === 'hire' ? colors.primary : colors.textSecondary}
-                    />
-                    <Text style={[
-                        styles.intentText,
-                        selectedIntent === 'hire' && styles.intentTextSelected
-                    ]}>
-                        I want to Hire
-                    </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[
-                        styles.intentCard,
-                        selectedIntent === 'work' && styles.intentCardSelected
-                    ]}
-                    onPress={() => setSelectedIntent('work')}
-                >
-                    <IconSymbol
-                        ios_icon_name="briefcase.circle.fill"
-                        android_material_icon_name="work"
-                        size={48}
-                        color={selectedIntent === 'work' ? colors.primary : colors.textSecondary}
-                    />
-                    <Text style={[
-                        styles.intentText,
-                        selectedIntent === 'work' && styles.intentTextSelected
-                    ]}>
-                        I want to Work
-                    </Text>
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
-
     const renderLocationSelect = (item: OnboardingStep) => (
         <View style={styles.contentContainer}>
+            <View style={styles.locationIconContainer}>
+                <IconSymbol
+                    ios_icon_name="map.circle.fill"
+                    android_material_icon_name="location-on"
+                    size={80}
+                    color={colors.primary}
+                />
+            </View>
             <Text style={styles.title}>{item.title}</Text>
             <Text style={styles.description}>{item.description}</Text>
 
-            <View style={styles.locationsContainer}>
-                {loadingLocations ? (
-                    <ActivityIndicator size="large" color={colors.primary} />
-                ) : locations.length === 0 ? (
-                    <View style={styles.noLocations}>
-                        <IconSymbol
-                            ios_icon_name="globe"
-                            android_material_icon_name="public"
-                            size={48}
-                            color={colors.textSecondary}
-                        />
-                        <Text style={styles.noLocationsText}>No specific locations found.</Text>
-                        <Text style={styles.noLocationsSubText}>We'll show you all available services.</Text>
-                    </View>
-                ) : (
-                    <View style={styles.chipsContainer}>
-                        {locations.map((loc) => {
-                            const isSelected = selectedLocation === loc;
-                            return (
-                                <TouchableOpacity
-                                    key={loc}
-                                    style={[
-                                        styles.chip,
-                                        isSelected && styles.chipSelected
-                                    ]}
-                                    onPress={() => toggleLocation(loc)}
-                                >
-                                    <IconSymbol
-                                        ios_icon_name={isSelected ? "checkmark.circle.fill" : "mappin.circle"}
-                                        android_material_icon_name={isSelected ? "check-circle" : "location-on"}
-                                        size={16}
-                                        color={isSelected ? colors.background : colors.textSecondary}
-                                        style={{ marginRight: 4 }}
-                                    />
-                                    <Text style={[
-                                        styles.chipText,
-                                        isSelected && styles.chipTextSelected
-                                    ]}>
-                                        {loc}
-                                    </Text>
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </View>
-                )}
-            </View>
+            {/* Location Selector Button */}
+            <TouchableOpacity
+                style={styles.locationButton}
+                onPress={() => setShowLocationModal(true)}
+                activeOpacity={0.7}
+            >
+                <View style={styles.locationIconBox}>
+                    <IconSymbol
+                        ios_icon_name="mappin.circle.fill"
+                        android_material_icon_name="location-on"
+                        size={24}
+                        color={colors.primary}
+                    />
+                </View>
+                <View style={styles.locationTextContainer}>
+                    <Text style={styles.locationLabel}>Your Location</Text>
+                    <Text style={styles.locationValue}>
+                        {selectedLocation || 'All Locations'}
+                    </Text>
+                </View>
+                <IconSymbol
+                    ios_icon_name="chevron.down"
+                    android_material_icon_name="expand-more"
+                    size={20}
+                    color={colors.textSecondary}
+                />
+            </TouchableOpacity>
 
             <Text style={styles.hintText}>
                 {selectedLocation
-                    ? `Services will be filtered for ${selectedLocation}`
-                    : "Showing all services from everywhere"}
+                    ? `You'll see services available in ${selectedLocation}`
+                    : "You'll see services from all locations"}
             </Text>
         </View>
     );
@@ -285,11 +215,9 @@ export default function OnboardingScreen() {
     const renderItem = ({ item }: { item: OnboardingStep }) => {
         return (
             <View style={styles.slide}>
-                {item.type === 'intent'
-                    ? renderIntentSelect(item)
-                    : item.type === 'location'
-                        ? renderLocationSelect(item)
-                        : renderIntroOutro(item)
+                {item.type === 'location'
+                    ? renderLocationSelect(item)
+                    : renderIntroOutro(item)
                 }
             </View>
         );
@@ -314,7 +242,7 @@ export default function OnboardingScreen() {
                 keyExtractor={(item) => item.id}
                 style={styles.list}
                 scrollEnabled={true}
-                extraData={{ selectedLocation, locations, loadingLocations, selectedIntent }}
+                extraData={{ selectedLocation, cities, loadingCities }}
             />
 
             <View style={styles.footer}>
@@ -336,6 +264,115 @@ export default function OnboardingScreen() {
                     </Text>
                 </TouchableOpacity>
             </View>
+
+            {/* Location Modal */}
+            <Modal
+                visible={showLocationModal}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowLocationModal(false)}
+            >
+                <Pressable
+                    style={styles.modalOverlay}
+                    onPress={() => setShowLocationModal(false)}
+                >
+                    <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select Your City</Text>
+                            <TouchableOpacity
+                                onPress={() => setShowLocationModal(false)}
+                                style={styles.modalCloseButton}
+                            >
+                                <IconSymbol
+                                    ios_icon_name="xmark.circle.fill"
+                                    android_material_icon_name="cancel"
+                                    size={28}
+                                    color={colors.textSecondary}
+                                />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+                            {/* All Locations Option */}
+                            <TouchableOpacity
+                                style={[
+                                    styles.locationOption,
+                                    selectedLocation === '' && styles.locationOptionSelected
+                                ]}
+                                onPress={() => selectLocation('')}
+                            >
+                                <View style={styles.locationOptionContent}>
+                                    <IconSymbol
+                                        ios_icon_name="globe"
+                                        android_material_icon_name="public"
+                                        size={22}
+                                        color={selectedLocation === '' ? colors.primary : colors.textSecondary}
+                                    />
+                                    <Text style={[
+                                        styles.locationOptionText,
+                                        selectedLocation === '' && styles.locationOptionTextSelected
+                                    ]}>
+                                        All Locations
+                                    </Text>
+                                </View>
+                                {selectedLocation === '' && (
+                                    <IconSymbol
+                                        ios_icon_name="checkmark.circle.fill"
+                                        android_material_icon_name="check-circle"
+                                        size={24}
+                                        color={colors.primary}
+                                    />
+                                )}
+                            </TouchableOpacity>
+
+                            {/* Divider */}
+                            <View style={styles.divider} />
+
+                            {/* City Options */}
+                            {loadingCities ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="large" color={colors.primary} />
+                                    <Text style={styles.loadingText}>Loading cities...</Text>
+                                </View>
+                            ) : (
+                                cities.map((city) => (
+                                    <TouchableOpacity
+                                        key={city}
+                                        style={[
+                                            styles.locationOption,
+                                            selectedLocation === city && styles.locationOptionSelected
+                                        ]}
+                                        onPress={() => selectLocation(city)}
+                                    >
+                                        <View style={styles.locationOptionContent}>
+                                            <IconSymbol
+                                                ios_icon_name="mappin.circle"
+                                                android_material_icon_name="place"
+                                                size={22}
+                                                color={selectedLocation === city ? colors.primary : colors.textSecondary}
+                                            />
+                                            <Text style={[
+                                                styles.locationOptionText,
+                                                selectedLocation === city && styles.locationOptionTextSelected
+                                            ]}>
+                                                {city}
+                                            </Text>
+                                        </View>
+                                        {selectedLocation === city && (
+                                            <IconSymbol
+                                                ios_icon_name="checkmark.circle.fill"
+                                                android_material_icon_name="check-circle"
+                                                size={24}
+                                                color={colors.primary}
+                                            />
+                                        )}
+                                    </TouchableOpacity>
+                                ))
+                            )}
+                        </ScrollView>
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -381,11 +418,22 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: colors.border,
     },
+    locationIconContainer: {
+        marginBottom: spacing.lg,
+        width: 140,
+        height: 140,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: colors.primary + '15',
+        borderRadius: 70,
+    },
     title: {
         ...typography.h1,
         textAlign: 'center',
         marginBottom: spacing.md,
         color: colors.text,
+        fontSize: 28,
+        paddingHorizontal: spacing.md,
     },
     description: {
         ...typography.body,
@@ -393,95 +441,50 @@ const styles = StyleSheet.create({
         color: colors.textSecondary,
         lineHeight: 24,
         marginBottom: spacing.xl,
+        paddingHorizontal: spacing.sm,
+        fontSize: 16,
     },
-    intentsContainer: {
-        width: '100%',
-        gap: spacing.md,
-        paddingHorizontal: spacing.md,
-    },
-    intentCard: {
+    locationButton: {
         flexDirection: 'row',
         alignItems: 'center',
         backgroundColor: colors.card,
-        padding: spacing.lg,
-        borderRadius: borderRadius.lg,
         borderWidth: 2,
         borderColor: colors.border,
-        gap: spacing.md,
-    },
-    intentCardSelected: {
-        borderColor: colors.primary,
-        backgroundColor: colors.primary + '10', // 10% opacity hex
-    },
-    intentText: {
-        fontSize: 18,
-        fontWeight: '600',
-        color: colors.text,
-    },
-    intentTextSelected: {
-        color: colors.primary,
-    },
-    locationsContainer: {
-        width: '100%',
-        minHeight: 200,
-        backgroundColor: colors.card,
         borderRadius: borderRadius.lg,
         padding: spacing.md,
-        borderWidth: 1,
-        borderColor: colors.border,
-        marginBottom: spacing.md,
-    },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-    },
-    noLocations: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: spacing.xl,
-    },
-    noLocationsText: {
-        ...typography.h3,
+        minHeight: 72,
+        width: '100%',
         marginTop: spacing.md,
-        color: colors.text,
     },
-    noLocationsSubText: {
-        ...typography.bodySecondary,
-        textAlign: 'center',
-        marginTop: spacing.xs,
-    },
-    chipsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: spacing.sm,
-        justifyContent: 'center',
-    },
-    chip: {
-        flexDirection: 'row',
+    locationIconBox: {
+        width: 48,
+        height: 48,
+        borderRadius: borderRadius.md,
+        backgroundColor: colors.primary + '15',
         alignItems: 'center',
-        paddingVertical: spacing.sm,
-        paddingHorizontal: spacing.md,
-        backgroundColor: colors.background,
-        borderRadius: borderRadius.full,
-        borderWidth: 1,
-        borderColor: colors.border,
+        justifyContent: 'center',
+        marginRight: spacing.md,
     },
-    chipSelected: {
-        backgroundColor: colors.primary,
-        borderColor: colors.primary,
+    locationTextContainer: {
+        flex: 1,
     },
-    chipText: {
-        fontSize: 14,
-        fontWeight: '500',
+    locationLabel: {
+        ...typography.caption,
+        color: colors.textSecondary,
+        marginBottom: 2,
+    },
+    locationValue: {
+        ...typography.body,
+        fontSize: 16,
+        fontWeight: '600',
         color: colors.text,
-    },
-    chipTextSelected: {
-        color: colors.background,
     },
     hintText: {
         ...typography.caption,
         color: colors.textSecondary,
         fontStyle: 'italic',
+        marginTop: spacing.md,
+        textAlign: 'center',
     },
     footer: {
         padding: spacing.xl,
@@ -505,18 +508,90 @@ const styles = StyleSheet.create({
     },
     button: {
         backgroundColor: colors.primary,
-        paddingVertical: spacing.md,
-        borderRadius: borderRadius.md,
+        paddingVertical: spacing.md + 4,
+        borderRadius: borderRadius.lg,
         alignItems: 'center',
         shadowColor: colors.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
-        elevation: 4,
+        elevation: 8,
     },
     buttonText: {
         color: '#FFFFFF',
         fontSize: 18,
         fontWeight: '700',
+        letterSpacing: 0.5,
+    },
+    // Modal Styles
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        backgroundColor: colors.card,
+        borderTopLeftRadius: borderRadius.xl,
+        borderTopRightRadius: borderRadius.xl,
+        maxHeight: '80%',
+        paddingBottom: spacing.xl,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: spacing.lg,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+    },
+    modalTitle: {
+        ...typography.h2,
+        fontSize: 20,
+    },
+    modalCloseButton: {
+        padding: spacing.xs,
+    },
+    modalScroll: {
+        paddingHorizontal: spacing.lg,
+    },
+    locationOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: spacing.md,
+        paddingHorizontal: spacing.md,
+        borderRadius: borderRadius.md,
+        marginVertical: spacing.xs,
+    },
+    locationOptionSelected: {
+        backgroundColor: colors.primary + '10',
+    },
+    locationOptionContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    locationOptionText: {
+        ...typography.body,
+        fontSize: 16,
+        marginLeft: spacing.md,
+        color: colors.text,
+    },
+    locationOptionTextSelected: {
+        fontWeight: '600',
+        color: colors.primary,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: colors.border,
+        marginVertical: spacing.sm,
+    },
+    loadingContainer: {
+        padding: spacing.xl,
+        alignItems: 'center',
+    },
+    loadingText: {
+        ...typography.bodySecondary,
+        marginTop: spacing.md,
     },
 });
