@@ -192,6 +192,9 @@ export default function ServicesScreen() {
                   >
                     <View style={styles.serviceHeader}>
                       <Text style={styles.serviceTitle}>{service.title}</Text>
+                      {service.price > 0 && (
+                        <Text style={styles.servicePrice}>{priceText}</Text>
+                      )}
                     </View>
                     <Text style={styles.serviceDescription} numberOfLines={2}>
                       {service.description}

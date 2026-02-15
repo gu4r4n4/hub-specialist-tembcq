@@ -155,7 +155,7 @@ export default function SpecialistDetailScreen() {
           />
           <Text style={styles.name}>{specialist.full_name}</Text>
           {specialist.city && <Text style={styles.city}>{specialist.city}</Text>}
-          
+
           {/* Rating */}
           <View style={styles.ratingContainer}>
             <IconSymbol
@@ -232,8 +232,8 @@ export default function SpecialistDetailScreen() {
               {services.map((service, index) => {
                 const categoryName = service.category?.name || 'Uncategorized';
                 const priceText = `${service.currency} ${service.price.toFixed(2)}`;
-                const serviceRatingText = service.rating_count > 0 
-                  ? `${service.rating_avg.toFixed(1)} (${service.rating_count})` 
+                const serviceRatingText = service.rating_count > 0
+                  ? `${service.rating_avg.toFixed(1)} (${service.rating_count})`
                   : 'No ratings';
 
                 return (
@@ -247,7 +247,9 @@ export default function SpecialistDetailScreen() {
                     >
                       <View style={styles.serviceHeader}>
                         <Text style={styles.serviceTitle}>{service.title}</Text>
-                        <Text style={styles.servicePrice}>{priceText}</Text>
+                        {service.price > 0 && (
+                          <Text style={styles.servicePrice}>{priceText}</Text>
+                        )}
                       </View>
                       <Text style={styles.serviceDescription} numberOfLines={2}>
                         {service.description}
