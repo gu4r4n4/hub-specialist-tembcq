@@ -1,16 +1,20 @@
 
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
 import { IconSymbol } from '@/components/IconSymbol';
+import { supabase } from '@/lib/supabase';
+import { Service } from '@/types/database';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, profile, signOut } = useAuth();
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [myListings, setMyListings] = useState<Service[]>([]);
+  const [loadingListings, setLoadingListings] = useState(false);
 
   const handleSignOut = async () => {
     console.log('User confirmed sign out');
@@ -19,6 +23,33 @@ export default function ProfileScreen() {
     console.log('User signed out, navigating to home');
     router.replace('/(tabs)/(home)');
   };
+
+  const fetchMyListings = async () => {
+    if (!profile) return;
+
+    setLoadingListings(true);
+    try {
+      const { data, error } = await supabase
+        .from('services')
+        .select('*, category:categories(*)')
+        .eq('specialist_profile_id', profile.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setMyListings(data || []);
+    } catch (err) {
+      console.error('Error fetching my listings:', err);
+    } finally {
+      setLoadingListings(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user && profile) {
+      fetchMyListings();
+    }
+  }, [user, profile]);
 
   if (!user || !profile) {
     return (
@@ -99,6 +130,78 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
+
+        {profile.role === 'specialist' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>My Listings</Text>
+              {myListings.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => router.push('/create-listing')}
+                  style={styles.addButton}
+                >
+                  <IconSymbol
+                    ios_icon_name="plus.circle.fill"
+                    android_material_icon_name="add-circle"
+                    size={24}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {loadingListings ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+              </View>
+            ) : myListings.length === 0 ? (
+              <View style={styles.emptyListings}>
+                <IconSymbol
+                  ios_icon_name="doc.text"
+                  android_material_icon_name="description"
+                  size={48}
+                  color={colors.textSecondary}
+                />
+                <Text style={styles.emptyListingsText}>No listings yet</Text>
+                <TouchableOpacity
+                  style={styles.createListingButton}
+                  onPress={() => router.push('/create-listing')}
+                >
+                  <Text style={styles.createListingButtonText}>Create Your First Listing</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.listingsContainer}>
+                {myListings.map((listing) => (
+                  <TouchableOpacity
+                    key={listing.id}
+                    style={styles.listingCard}
+                    onPress={() => router.push(`/service/${listing.id}`)}
+                  >
+                    <View style={styles.listingHeader}>
+                      <Text style={styles.listingTitle} numberOfLines={1}>
+                        {listing.title}
+                      </Text>
+                      {listing.category && (
+                        <View style={styles.categoryBadge}>
+                          <Text style={styles.categoryText}>{listing.category.name}</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Text style={styles.listingDescription} numberOfLines={2}>
+                      {listing.description}
+                    </Text>
+                    {listing.price > 0 && (
+                      <Text style={styles.listingPrice}>
+                        {listing.currency} {listing.price}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
 
         <View style={styles.section}>
           <TouchableOpacity
@@ -250,6 +353,89 @@ const styles = StyleSheet.create({
     ...typography.h3,
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  addButton: {
+    padding: spacing.xs,
+  },
+  loadingContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyListings: {
+    backgroundColor: colors.card,
+    marginHorizontal: spacing.lg,
+    padding: spacing.xl,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyListingsText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  createListingButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+  },
+  createListingButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  listingsContainer: {
+    marginHorizontal: spacing.lg,
+    gap: spacing.md,
+  },
+  listingCard: {
+    backgroundColor: colors.card,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  listingHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
+  listingTitle: {
+    ...typography.body,
+    fontWeight: '600',
+    flex: 1,
+  },
+  categoryBadge: {
+    backgroundColor: colors.primary + '20',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.sm,
+  },
+  categoryText: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  listingDescription: {
+    ...typography.bodySecondary,
+    marginBottom: spacing.sm,
+  },
+  listingPrice: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '600',
   },
   infoCard: {
     backgroundColor: colors.card,
