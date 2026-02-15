@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
@@ -7,6 +7,7 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { supabase } from '@/lib/supabase';
 
 export default function SearchScreen() {
+    console.log('SearchScreen rendered');
     const router = useRouter();
     const [location, setLocation] = useState('');
     const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -64,12 +65,13 @@ export default function SearchScreen() {
         const categoryId = selectedCategory?.id;
         console.log('Searching for category:', categoryId, 'in', location);
 
-        // Build query params
-        const params = new URLSearchParams();
-        if (location) params.append('location', location);
-        if (categoryId) params.append('category', categoryId);
-
-        router.push(`/(tabs)/services?${params.toString()}`);
+        router.push({
+            pathname: '/(tabs)/services',
+            params: {
+                location: location || '',
+                category: categoryId || '',
+            },
+        });
     };
 
     const selectLocation = (city: string) => {
