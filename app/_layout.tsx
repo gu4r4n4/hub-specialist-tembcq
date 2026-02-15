@@ -51,7 +51,7 @@ export default function RootLayout() {
             <Stack.Screen name="booking/[serviceId]" options={{ headerShown: true, title: "Book Service" }} />
             <Stack.Screen name="order/[id]" options={{ headerShown: true, title: "Order Details" }} />
             <Stack.Screen name="search" options={{ presentation: 'modal', headerShown: false }} />
-            <Stack.Screen name="add-listing" options={{ headerShown: true, title: "Add Listing" }} />
+            <Stack.Screen name="create-listing" options={{ headerShown: true, title: "Create Listing" }} />
             <Stack.Screen name="+not-found" />
           </Stack>
         </AuthProvider>
