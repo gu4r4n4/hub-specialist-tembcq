@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Pressable } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
@@ -9,15 +9,36 @@ import { supabase } from '@/lib/supabase';
 export default function SearchScreen() {
     const router = useRouter();
     const [location, setLocation] = useState('');
-    const [query, setQuery] = useState('');
+    const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+    const [categoriesLoading, setCategoriesLoading] = useState(false);
+    const [selectedCategory, setSelectedCategory] = useState<{ id: string; name: string } | null>(null);
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [cities, setCities] = useState<string[]>([]);
     const [loadingCities, setLoadingCities] = useState(true);
     const [showLocationModal, setShowLocationModal] = useState(false);
-    const [searchFocused, setSearchFocused] = useState(false);
 
     useEffect(() => {
         fetchCities();
+        loadCategories();
     }, []);
+
+    const loadCategories = async () => {
+        try {
+            setCategoriesLoading(true);
+            const { data, error } = await supabase
+                .from('categories')
+                .select('id, name')
+                .order('name', { ascending: true });
+
+            if (error) throw error;
+            setCategories((data || []) as any);
+        } catch (e: any) {
+            console.error('Load categories error:', e);
+            Alert.alert('Error', e?.message || 'Failed to load categories');
+        } finally {
+            setCategoriesLoading(false);
+        }
+    };
 
     const fetchCities = async () => {
         try {
@@ -40,8 +61,15 @@ export default function SearchScreen() {
     };
 
     const handleSearch = () => {
-        console.log('Searching for:', query, 'in', location);
-        router.push(`/(tabs)/services?search=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`);
+        const categoryId = selectedCategory?.id;
+        console.log('Searching for category:', categoryId, 'in', location);
+
+        // Build query params
+        const params = new URLSearchParams();
+        if (location) params.append('location', location);
+        if (categoryId) params.append('category', categoryId);
+
+        router.push(`/(tabs)/services?${params.toString()}`);
     };
 
     const selectLocation = (city: string) => {
@@ -96,53 +124,46 @@ export default function SearchScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Search Input */}
+                {/* Category Selector */}
                 <View style={styles.section}>
                     <Text style={styles.label}>What service are you looking for?</Text>
-                    <View style={[
-                        styles.searchInputContainer,
-                        searchFocused && styles.searchInputContainerFocused
-                    ]}>
-                        <View style={styles.searchIconContainer}>
+                    <TouchableOpacity
+                        style={styles.locationButton}
+                        onPress={() => setShowCategoryModal(true)}
+                        activeOpacity={0.7}
+                    >
+                        <View style={[styles.locationIconContainer, { backgroundColor: colors.primary + '15' }]}>
                             <IconSymbol
-                                ios_icon_name="magnifyingglass"
-                                android_material_icon_name="search"
+                                ios_icon_name="tag.fill"
+                                android_material_icon_name="sell"
                                 size={22}
-                                color={searchFocused ? colors.primary : colors.textSecondary}
+                                color={colors.primary}
                             />
                         </View>
-                        <TextInput
-                            style={styles.searchInput}
-                            placeholder="e.g. Plumber, Electrician, Cleaner"
-                            value={query}
-                            onChangeText={setQuery}
-                            placeholderTextColor={colors.textSecondary}
-                            onFocus={() => setSearchFocused(true)}
-                            onBlur={() => setSearchFocused(false)}
-                            onSubmitEditing={handleSearch}
-                            returnKeyType="search"
+                        <View style={styles.locationTextContainer}>
+                            <Text style={styles.locationLabel}>Category</Text>
+                            <Text style={styles.locationValue}>
+                                {selectedCategory?.name || 'All Categories'}
+                            </Text>
+                            {!selectedCategory && (
+                                <Text style={styles.selectorHint} numberOfLines={1}>
+                                    Tap to choose a category
+                                </Text>
+                            )}
+                        </View>
+                        <IconSymbol
+                            ios_icon_name="chevron.down"
+                            android_material_icon_name="expand-more"
+                            size={20}
+                            color={colors.textSecondary}
                         />
-                        {query.length > 0 && (
-                            <TouchableOpacity
-                                onPress={() => setQuery('')}
-                                style={styles.clearButton}
-                            >
-                                <IconSymbol
-                                    ios_icon_name="xmark.circle.fill"
-                                    android_material_icon_name="cancel"
-                                    size={20}
-                                    color={colors.textSecondary}
-                                />
-                            </TouchableOpacity>
-                        )}
-                    </View>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Search Button */}
                 <TouchableOpacity
-                    style={[styles.searchButton, !query.trim() && styles.searchButtonDisabled]}
+                    style={styles.searchButton}
                     onPress={handleSearch}
-                    disabled={!query.trim()}
                     activeOpacity={0.8}
                 >
                     <IconSymbol
@@ -250,6 +271,121 @@ export default function SearchScreen() {
                                             </Text>
                                         </View>
                                         {location === city && (
+                                            <IconSymbol
+                                                ios_icon_name="checkmark.circle.fill"
+                                                android_material_icon_name="check-circle"
+                                                size={24}
+                                                color={colors.primary}
+                                            />
+                                        )}
+                                    </TouchableOpacity>
+                                ))
+                            )}
+                        </ScrollView>
+                    </Pressable>
+                </Pressable>
+            </Modal>
+
+            {/* Category Modal */}
+            <Modal
+                visible={showCategoryModal}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setShowCategoryModal(false)}
+            >
+                <Pressable
+                    style={styles.modalOverlay}
+                    onPress={() => setShowCategoryModal(false)}
+                >
+                    <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+                        <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>Select Category</Text>
+                            <TouchableOpacity
+                                onPress={() => setShowCategoryModal(false)}
+                                style={styles.modalCloseButton}
+                            >
+                                <IconSymbol
+                                    ios_icon_name="xmark.circle.fill"
+                                    android_material_icon_name="cancel"
+                                    size={28}
+                                    color={colors.textSecondary}
+                                />
+                            </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+                            {/* All Categories Option */}
+                            <TouchableOpacity
+                                style={[
+                                    styles.locationOption,
+                                    !selectedCategory && styles.locationOptionSelected
+                                ]}
+                                onPress={() => {
+                                    setSelectedCategory(null);
+                                    setShowCategoryModal(false);
+                                }}
+                            >
+                                <View style={styles.locationOptionContent}>
+                                    <IconSymbol
+                                        ios_icon_name="square.grid.2x2.fill"
+                                        android_material_icon_name="apps"
+                                        size={22}
+                                        color={!selectedCategory ? colors.primary : colors.textSecondary}
+                                    />
+                                    <Text style={[
+                                        styles.locationOptionText,
+                                        !selectedCategory && styles.locationOptionTextSelected
+                                    ]}>
+                                        All Categories
+                                    </Text>
+                                </View>
+                                {!selectedCategory && (
+                                    <IconSymbol
+                                        ios_icon_name="checkmark.circle.fill"
+                                        android_material_icon_name="check-circle"
+                                        size={24}
+                                        color={colors.primary}
+                                    />
+                                )}
+                            </TouchableOpacity>
+
+                            {/* Divider */}
+                            <View style={styles.divider} />
+
+                            {/* Category Options */}
+                            {categoriesLoading ? (
+                                <View style={styles.loadingContainer}>
+                                    <ActivityIndicator size="large" color={colors.primary} />
+                                    <Text style={styles.loadingText}>Loading categories...</Text>
+                                </View>
+                            ) : (
+                                categories.map((cat) => (
+                                    <TouchableOpacity
+                                        key={cat.id}
+                                        style={[
+                                            styles.locationOption,
+                                            selectedCategory?.id === cat.id && styles.locationOptionSelected
+                                        ]}
+                                        onPress={() => {
+                                            setSelectedCategory(cat);
+                                            setShowCategoryModal(false);
+                                        }}
+                                    >
+                                        <View style={styles.locationOptionContent}>
+                                            <IconSymbol
+                                                ios_icon_name="tag.fill"
+                                                android_material_icon_name="sell"
+                                                size={22}
+                                                color={selectedCategory?.id === cat.id ? colors.primary : colors.textSecondary}
+                                            />
+                                            <Text style={[
+                                                styles.locationOptionText,
+                                                selectedCategory?.id === cat.id && styles.locationOptionTextSelected
+                                            ]}>
+                                                {cat.name}
+                                            </Text>
+                                        </View>
+                                        {selectedCategory?.id === cat.id && (
                                             <IconSymbol
                                                 ios_icon_name="checkmark.circle.fill"
                                                 android_material_icon_name="check-circle"
@@ -465,5 +601,10 @@ const styles = StyleSheet.create({
     loadingText: {
         ...typography.bodySecondary,
         marginTop: spacing.md,
+    },
+    selectorHint: {
+        ...typography.caption,
+        color: colors.textSecondary,
+        marginTop: 2,
     },
 });
