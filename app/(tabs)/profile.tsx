@@ -664,16 +664,19 @@ export default function ProfileScreen() {
             <Text style={styles.modalText}>Are you sure you want to sign out?</Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={styles.modalButtonCancel}
-                onPress={() => {
-                  console.log('User cancelled sign out');
-                  setShowSignOutModal(false);
-                }}
+                style={[styles.modalBtn, styles.modalBtnSecondary]}
+                onPress={() => setShowSignOutModal(false)}
+                activeOpacity={0.9}
               >
-                <Text style={styles.modalButtonCancelText}>Cancel</Text>
+                <Text style={styles.modalBtnSecondaryText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalButtonConfirm} onPress={handleSignOut}>
-                <Text style={styles.modalButtonConfirmText}>Sign Out</Text>
+
+              <TouchableOpacity
+                style={[styles.modalBtn, styles.modalBtnDanger]}
+                onPress={handleSignOut}
+                activeOpacity={0.9}
+              >
+                <Text style={styles.modalBtnDangerText}>Sign Out</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -959,6 +962,14 @@ const styles = StyleSheet.create({
   },
   modalBtnDisabled: {
     opacity: 0.6,
+  },
+  modalBtnDanger: {
+    backgroundColor: colors.error,
+  },
+  modalBtnDangerText: {
+    ...typography.body,
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   avatarImage: {
     width: 80,
