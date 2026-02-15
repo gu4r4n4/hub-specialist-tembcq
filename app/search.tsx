@@ -1,14 +1,44 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
+import { supabase } from '@/lib/supabase';
+import { Picker } from '@react-native-picker/picker';
 
 export default function SearchScreen() {
     const router = useRouter();
     const [location, setLocation] = useState('');
     const [query, setQuery] = useState('');
+    const [cities, setCities] = useState<string[]>([]);
+    const [loadingCities, setLoadingCities] = useState(true);
+
+    useEffect(() => {
+        fetchCities();
+    }, []);
+
+    const fetchCities = async () => {
+        try {
+            setLoadingCities(true);
+            // Fetch distinct cities from services table
+            const { data, error } = await supabase
+                .from('services')
+                .select('city')
+                .not('city', 'is', null)
+                .eq('is_active', true);
+
+            if (error) throw error;
+
+            // Extract unique cities and sort them
+            const uniqueCities = [...new Set(data.map(item => item.city).filter(Boolean))].sort();
+            setCities(uniqueCities as string[]);
+        } catch (err) {
+            console.error('Error fetching cities:', err);
+        } finally {
+            setLoadingCities(false);
+        }
+    };
 
     const handleSearch = () => {
         console.log('Searching for:', query, 'in', location);
@@ -33,7 +63,7 @@ export default function SearchScreen() {
 
             <View style={styles.content}>
                 <Text style={styles.label}>Location</Text>
-                <View style={styles.inputContainer}>
+                <View style={styles.pickerContainer}>
                     <IconSymbol
                         ios_icon_name="mappin.and.ellipse"
                         android_material_icon_name="location-on"
@@ -41,13 +71,21 @@ export default function SearchScreen() {
                         color={colors.primary}
                         style={styles.inputIcon}
                     />
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Current Location"
-                        value={location}
-                        onChangeText={setLocation}
-                        placeholderTextColor={colors.textSecondary}
-                    />
+                    {loadingCities ? (
+                        <ActivityIndicator size="small" color={colors.primary} style={{ flex: 1 }} />
+                    ) : (
+                        <Picker
+                            selectedValue={location}
+                            onValueChange={(itemValue) => setLocation(itemValue)}
+                            style={styles.picker}
+                            dropdownIconColor={colors.text}
+                        >
+                            <Picker.Item label="All Locations" value="" />
+                            {cities.map((city) => (
+                                <Picker.Item key={city} label={city} value={city} />
+                            ))}
+                        </Picker>
+                    )}
                 </View>
 
                 <Text style={styles.label}>Service or Keyword</Text>
@@ -119,6 +157,21 @@ const styles = StyleSheet.create({
     },
     inputIcon: {
         marginRight: spacing.sm,
+    },
+    pickerContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.card,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: borderRadius.md,
+        paddingLeft: spacing.md,
+        marginBottom: spacing.md,
+        minHeight: 50,
+    },
+    picker: {
+        flex: 1,
+        color: colors.text,
     },
     input: {
         flex: 1,
