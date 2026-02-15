@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     View,
     Text,
@@ -7,37 +7,51 @@ import {
     Dimensions,
     FlatList,
     TouchableOpacity,
-    Image,
     NativeSyntheticEvent,
     NativeScrollEvent,
+    ActivityIndicator,
+    Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
-const SLIDES = [
+type OnboardingStep = {
+    id: string;
+    type: 'intro' | 'location' | 'outro';
+    title: string;
+    description: string;
+    icon?: string;
+    materialIcon?: string;
+};
+
+const STEPS: OnboardingStep[] = [
     {
         id: '1',
+        type: 'intro',
         title: 'Find Trusted Specialists',
         description: 'Connect with verified professionals for all your home service needs.',
-        icon: 'magnifyingglass.circle.fill', // SF Symbol
+        icon: 'magnifyingglass.circle.fill',
         materialIcon: 'search',
     },
     {
         id: '2',
-        title: 'Book Instantly',
-        description: 'Schedule appointments seamlessly with real-time availability.',
-        icon: 'calendar.circle.fill',
-        materialIcon: 'event',
+        type: 'location',
+        title: 'Select Your Location',
+        description: 'Find services available in your area. You can always change this later.',
+        icon: 'map.circle.fill',
+        materialIcon: 'location-on',
     },
     {
         id: '3',
-        title: 'Track Your Orders',
-        description: 'Monitor your service status and chat with specialists in real-time.',
+        type: 'outro',
+        title: 'You\'re All Set',
+        description: 'Ready to discover customized services tailored just for you.',
         icon: 'checkmark.circle.fill',
         materialIcon: 'check-circle',
     },
@@ -47,10 +61,58 @@ export default function OnboardingScreen() {
     const router = useRouter();
     const [currentIndex, setCurrentIndex] = useState(0);
     const flatListRef = useRef<FlatList>(null);
+    const [locations, setLocations] = useState<string[]>([]);
+    const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+    const [loadingLocations, setLoadingLocations] = useState(false);
+
+    useEffect(() => {
+        fetchLocations();
+    }, []);
+
+    const fetchLocations = async () => {
+        if (!isSupabaseConfigured) return;
+
+        setLoadingLocations(true);
+        try {
+            // Fetch cities from profiles that have active services
+            // We join services with specialist(profile) and select the city
+            const { data, error } = await supabase
+                .from('services')
+                .select(`
+                    specialist:profiles!specialist_profile_id(city)
+                `)
+                .eq('is_active', true);
+
+            if (error) throw error;
+
+            if (data) {
+                // Extract unique cities (filtering out nulls/undefined)
+                const cities = new Set<string>();
+                data.forEach((item: any) => {
+                    if (item.specialist?.city) {
+                        cities.add(item.specialist.city);
+                    }
+                });
+
+                // Convert to array and sort
+                setLocations(Array.from(cities).sort());
+            }
+        } catch (err) {
+            console.error('Error fetching locations:', err);
+        } finally {
+            setLoadingLocations(false);
+        }
+    };
 
     const handleFinish = async () => {
         try {
             await AsyncStorage.setItem('onboarding_seen', 'true');
+            if (selectedLocation) {
+                await AsyncStorage.setItem('user_location_preference', selectedLocation);
+            } else {
+                await AsyncStorage.removeItem('user_location_preference');
+            }
+            // Navigate to home logic is handled by the root layout redirect usually, but here we explicitly push
             router.replace('/(tabs)/(home)');
         } catch (error) {
             console.error('Error saving onboarding status:', error);
@@ -58,7 +120,7 @@ export default function OnboardingScreen() {
     };
 
     const handleNext = () => {
-        if (currentIndex < SLIDES.length - 1) {
+        if (currentIndex < STEPS.length - 1) {
             flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
         } else {
             handleFinish();
@@ -66,7 +128,17 @@ export default function OnboardingScreen() {
     };
 
     const handleSkip = () => {
+        // Skip implies "Show All" / No preference
+        setSelectedLocation(null);
         handleFinish();
+    };
+
+    const toggleLocation = (loc: string) => {
+        if (selectedLocation === loc) {
+            setSelectedLocation(null);
+        } else {
+            setSelectedLocation(loc);
+        }
     };
 
     const onMomentumScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -74,13 +146,13 @@ export default function OnboardingScreen() {
         setCurrentIndex(index);
     };
 
-    const renderItem = ({ item }: { item: typeof SLIDES[0] }) => (
-        <View style={styles.slide}>
+    const renderIntroOutro = (item: OnboardingStep) => (
+        <View style={styles.contentContainer}>
             <View style={styles.imageContainer}>
                 <IconSymbol
                     ios_icon_name={item.icon as any}
                     android_material_icon_name={item.materialIcon as any}
-                    size={120}
+                    size={100}
                     color={colors.primary}
                 />
             </View>
@@ -88,6 +160,74 @@ export default function OnboardingScreen() {
             <Text style={styles.description}>{item.description}</Text>
         </View>
     );
+
+    const renderLocationSelect = (item: OnboardingStep) => (
+        <View style={styles.contentContainer}>
+            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.description}>{item.description}</Text>
+
+            <View style={styles.locationsContainer}>
+                {loadingLocations ? (
+                    <ActivityIndicator size="large" color={colors.primary} />
+                ) : locations.length === 0 ? (
+                    <View style={styles.noLocations}>
+                        <IconSymbol
+                            ios_icon_name="globe"
+                            android_material_icon_name="public"
+                            size={48}
+                            color={colors.textSecondary}
+                        />
+                        <Text style={styles.noLocationsText}>No specific locations found.</Text>
+                        <Text style={styles.noLocationsSubText}>We'll show you all available services.</Text>
+                    </View>
+                ) : (
+                    <View style={styles.chipsContainer}>
+                        {locations.map((loc) => {
+                            const isSelected = selectedLocation === loc;
+                            return (
+                                <TouchableOpacity
+                                    key={loc}
+                                    style={[
+                                        styles.chip,
+                                        isSelected && styles.chipSelected
+                                    ]}
+                                    onPress={() => toggleLocation(loc)}
+                                >
+                                    <IconSymbol
+                                        ios_icon_name={isSelected ? "checkmark.circle.fill" : "mappin.circle"}
+                                        android_material_icon_name={isSelected ? "check-circle" : "location-on"}
+                                        size={16}
+                                        color={isSelected ? colors.background : colors.textSecondary}
+                                        style={{ marginRight: 4 }}
+                                    />
+                                    <Text style={[
+                                        styles.chipText,
+                                        isSelected && styles.chipTextSelected
+                                    ]}>
+                                        {loc}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                )}
+            </View>
+
+            <Text style={styles.hintText}>
+                {selectedLocation
+                    ? `Services will be filtered for ${selectedLocation}`
+                    : "Showing all services from everywhere"}
+            </Text>
+        </View>
+    );
+
+    const renderItem = ({ item }: { item: OnboardingStep }) => {
+        return (
+            <View style={styles.slide}>
+                {item.type === 'location' ? renderLocationSelect(item) : renderIntroOutro(item)}
+            </View>
+        );
+    };
 
     return (
         <SafeAreaView style={styles.container}>
@@ -99,7 +239,7 @@ export default function OnboardingScreen() {
 
             <FlatList
                 ref={flatListRef}
-                data={SLIDES}
+                data={STEPS}
                 renderItem={renderItem}
                 horizontal
                 pagingEnabled
@@ -107,11 +247,13 @@ export default function OnboardingScreen() {
                 onMomentumScrollEnd={onMomentumScrollEnd}
                 keyExtractor={(item) => item.id}
                 style={styles.list}
+                scrollEnabled={true}
+                extraData={{ selectedLocation, locations, loadingLocations }}
             />
 
             <View style={styles.footer}>
                 <View style={styles.pagination}>
-                    {SLIDES.map((_, index) => (
+                    {STEPS.map((_, index) => (
                         <View
                             key={index}
                             style={[
@@ -124,7 +266,7 @@ export default function OnboardingScreen() {
 
                 <TouchableOpacity style={styles.button} onPress={handleNext}>
                     <Text style={styles.buttonText}>
-                        {currentIndex === SLIDES.length - 1 ? 'Get Started' : 'Next'}
+                        {currentIndex === STEPS.length - 1 ? 'Get Started' : 'Next'}
                     </Text>
                 </TouchableOpacity>
             </View>
@@ -156,16 +298,20 @@ const styles = StyleSheet.create({
         width,
         alignItems: 'center',
         paddingHorizontal: spacing.xl,
-        paddingTop: spacing.xxl, // More space at top
+    },
+    contentContainer: {
+        alignItems: 'center',
+        width: '100%',
+        paddingTop: spacing.xl,
     },
     imageContainer: {
-        marginBottom: spacing.xxl,
-        width: 200,
-        height: 200,
+        marginBottom: spacing.xl,
+        width: 160,
+        height: 160,
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: colors.card,
-        borderRadius: 100, // Circle
+        borderRadius: 80,
         borderWidth: 1,
         borderColor: colors.border,
     },
@@ -180,7 +326,69 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         color: colors.textSecondary,
         lineHeight: 24,
-        paddingHorizontal: spacing.lg,
+        marginBottom: spacing.xl,
+    },
+    locationsContainer: {
+        width: '100%',
+        minHeight: 200,
+        backgroundColor: colors.card,
+        borderRadius: borderRadius.lg,
+        padding: spacing.md,
+        borderWidth: 1,
+        borderColor: colors.border,
+        marginBottom: spacing.md,
+    },
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    noLocations: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: spacing.xl,
+    },
+    noLocationsText: {
+        ...typography.h3,
+        marginTop: spacing.md,
+        color: colors.text,
+    },
+    noLocationsSubText: {
+        ...typography.bodySecondary,
+        textAlign: 'center',
+        marginTop: spacing.xs,
+    },
+    chipsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: spacing.sm,
+        justifyContent: 'center',
+    },
+    chip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: spacing.sm,
+        paddingHorizontal: spacing.md,
+        backgroundColor: colors.background,
+        borderRadius: borderRadius.full,
+        borderWidth: 1,
+        borderColor: colors.border,
+    },
+    chipSelected: {
+        backgroundColor: colors.primary,
+        borderColor: colors.primary,
+    },
+    chipText: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: colors.text,
+    },
+    chipTextSelected: {
+        color: colors.background,
+    },
+    hintText: {
+        ...typography.caption,
+        color: colors.textSecondary,
+        fontStyle: 'italic',
     },
     footer: {
         padding: spacing.xl,
