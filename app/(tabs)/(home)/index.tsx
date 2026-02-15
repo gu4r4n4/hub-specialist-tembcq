@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
@@ -16,7 +16,6 @@ export default function HomeScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [featuredServices, setFeaturedServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     console.log('HomeScreen: Loading data');
@@ -62,8 +61,8 @@ export default function HomeScreen() {
   };
 
   const handleSearch = () => {
-    console.log('User tapped search with query:', searchQuery);
-    router.push(`/(tabs)/services?search=${encodeURIComponent(searchQuery)}`);
+    console.log('User tapped search icon');
+    router.push('/search');
   };
 
   const handleCategoryPress = (categoryId: string) => {
@@ -100,13 +99,13 @@ export default function HomeScreen() {
           />
           <Text style={styles.setupTitle}>Welcome to SpecHUB</Text>
           <Text style={styles.setupSubtitle}>A Services Marketplace</Text>
-          
+
           <View style={styles.setupCard}>
             <Text style={styles.setupCardTitle}>Setup Required</Text>
             <Text style={styles.setupCardText}>
               To get started, you need to configure your Supabase database:
             </Text>
-            
+
             <View style={styles.setupSteps}>
               <View style={styles.setupStep}>
                 <View style={styles.stepNumber}>
@@ -114,14 +113,14 @@ export default function HomeScreen() {
                 </View>
                 <Text style={styles.stepText}>Create a Supabase project at supabase.com</Text>
               </View>
-              
+
               <View style={styles.setupStep}>
                 <View style={styles.stepNumber}>
                   <Text style={styles.stepNumberText}>2</Text>
                 </View>
                 <Text style={styles.stepText}>Run the SQL setup from SUPABASE_SETUP.md</Text>
               </View>
-              
+
               <View style={styles.setupStep}>
                 <View style={styles.stepNumber}>
                   <Text style={styles.stepNumberText}>3</Text>
@@ -197,48 +196,31 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('@/assets/images/app-icon-mlt.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+          <TouchableOpacity onPress={handleSearch} style={styles.headerSearchButton}>
+            <IconSymbol
+              ios_icon_name="magnifyingglass"
+              android_material_icon_name="search"
+              size={24}
+              color={colors.text}
+            />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.welcomeSection}>
           <Text style={styles.greeting}>{greetingText}</Text>
           <Text style={styles.subtitle}>{subtitleText}</Text>
         </View>
 
-        <View style={styles.searchContainer}>
-          <View style={styles.searchInputContainer}>
-            <IconSymbol
-              ios_icon_name="magnifyingglass"
-              android_material_icon_name="search"
-              size={20}
-              color={colors.textSecondary}
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search services..."
-              placeholderTextColor={colors.textSecondary}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearch}
-              returnKeyType="search"
-            />
-          </View>
-          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
-            <Text style={styles.searchButtonText}>Search</Text>
-          </TouchableOpacity>
-        </View>
 
-        {!user && (
-          <View style={styles.authPrompt}>
-            <Text style={styles.authPromptText}>Sign in to book services and manage orders</Text>
-            <TouchableOpacity
-              style={styles.authButton}
-              onPress={() => {
-                console.log('User tapped Sign In button');
-                router.push('/auth/login');
-              }}
-            >
-              <Text style={styles.authButtonText}>Sign In</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+
+
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Categories</Text>
@@ -248,7 +230,7 @@ export default function HomeScreen() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoriesScroll}>
               {categories.map((category, index) => {
                 const categoryColor = category.color || colors.primary;
-                
+
                 // Prefer our mapping (consistent UI), fallback to DB values.
                 // Also normalize Material icon names (supports both underscore and hyphen sources).
                 const iconMapping = getCategoryIcons(category.name);
@@ -307,7 +289,7 @@ export default function HomeScreen() {
                       <Text style={styles.serviceDescription} numberOfLines={2}>
                         {service.description}
                       </Text>
-                      
+
                       {/* Specialist Summary Row */}
                       <View style={styles.specialistSummary}>
                         <IconSymbol
@@ -474,8 +456,35 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  logoContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  logoImage: {
+    width: 140,
+    height: 40,
+  },
+  headerSearchButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.card,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  welcomeSection: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
   },
   greeting: {
     ...typography.h1,
