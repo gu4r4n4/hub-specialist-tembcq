@@ -183,57 +183,6 @@ export default function AddListingScreen() {
     }
   };
 
-  const renderStepIndicator = () => {
-    return (
-      <View style={styles.stepIndicator}>
-        {Array.from({ length: totalSteps }).map((_, index) => {
-          const stepNumber = index + 1;
-          const isActive = stepNumber === currentStep;
-          const isCompleted = stepNumber < currentStep;
-
-          return (
-            <View key={stepNumber} style={styles.stepItem}>
-              <View
-                style={[
-                  styles.stepCircle,
-                  isActive && styles.stepCircleActive,
-                  isCompleted && styles.stepCircleCompleted,
-                ]}
-              >
-                {isCompleted ? (
-                  <IconSymbol
-                    android_material_icon_name="check"
-                    ios_icon_name="checkmark"
-                    size={16}
-                    color={colors.background}
-                  />
-                ) : (
-                  <Text
-                    style={[
-                      styles.stepNumber,
-                      isActive && styles.stepNumberActive,
-                    ]}
-                  >
-                    {stepNumber}
-                  </Text>
-                )}
-              </View>
-              {index < totalSteps - 1 && (
-                <View
-                  style={[
-                    styles.stepLine,
-                    isCompleted && styles.stepLineCompleted,
-                  ]}
-                />
-              )}
-            </View>
-          );
-        })}
-      </View>
-    );
-  };
-
-
   const renderStep2 = () => {
     const stepTitle = 'Select Category';
     const stepDescription = 'What type of service is this?';
@@ -407,51 +356,40 @@ export default function AddListingScreen() {
 
   return (
     <>
-
+      <Stack.Screen options={{ title: 'Create Listing', headerShown: true }} />
       <SafeAreaView style={styles.container} edges={['bottom']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
           <View style={styles.stepIndicator}>
-            {Array.from({ length: totalSteps }).map((_: unknown, index: number) => {
-              const stepNumber = index + 1;
-              const isActive = stepNumber === currentStep;
-              const isCompleted = stepNumber < currentStep;
-
-              return (
-                <View key={stepNumber} style={styles.stepItem}>
-                  <View
-                    style={[
-                      styles.stepCircle,
-                      isActive && styles.stepCircleActive,
-                      isCompleted && styles.stepCircleCompleted,
-                    ]}
-                  >
-                    {isCompleted ? (
-                      <Text style={{ color: colors.background, fontSize: 14, fontWeight: 'bold' }}>✓</Text>
-                    ) : (
-                      <Text
-                        style={[
-                          styles.stepNumber,
-                          isActive && styles.stepNumberActive,
-                        ]}
-                      >
-                        {stepNumber}
-                      </Text>
-                    )}
-                  </View>
-                  {index < totalSteps - 1 && (
-                    <View
-                      style={[
-                        styles.stepLine,
-                        isCompleted && styles.stepLineCompleted,
-                      ]}
-                    />
-                  )}
-                </View>
-              );
-            })}
+            {/* Step 1 */}
+            <View style={styles.stepItem}>
+              <View style={[styles.stepCircle, currentStep === 1 && styles.stepCircleActive, currentStep > 1 && styles.stepCircleCompleted]}>
+                {currentStep > 1 ? <Text style={{ color: colors.background, fontSize: 14, fontWeight: 'bold' }}>✓</Text> : <Text style={[styles.stepNumber, currentStep === 1 && styles.stepNumberActive]}>1</Text>}
+              </View>
+              <View style={[styles.stepLine, currentStep > 1 && styles.stepLineCompleted]} />
+            </View>
+            {/* Step 2 */}
+            <View style={styles.stepItem}>
+              <View style={[styles.stepCircle, currentStep === 2 && styles.stepCircleActive, currentStep > 2 && styles.stepCircleCompleted]}>
+                {currentStep > 2 ? <Text style={{ color: colors.background, fontSize: 14, fontWeight: 'bold' }}>✓</Text> : <Text style={[styles.stepNumber, currentStep === 2 && styles.stepNumberActive]}>2</Text>}
+              </View>
+              <View style={[styles.stepLine, currentStep > 2 && styles.stepLineCompleted]} />
+            </View>
+            {/* Step 3 */}
+            <View style={styles.stepItem}>
+              <View style={[styles.stepCircle, currentStep === 3 && styles.stepCircleActive, currentStep > 3 && styles.stepCircleCompleted]}>
+                {currentStep > 3 ? <Text style={{ color: colors.background, fontSize: 14, fontWeight: 'bold' }}>✓</Text> : <Text style={[styles.stepNumber, currentStep === 3 && styles.stepNumberActive]}>3</Text>}
+              </View>
+              <View style={[styles.stepLine, currentStep > 3 && styles.stepLineCompleted]} />
+            </View>
+            {/* Step 4 */}
+            <View style={styles.stepItem}>
+              <View style={[styles.stepCircle, currentStep === 4 && styles.stepCircleActive, currentStep > 4 && styles.stepCircleCompleted]}>
+                {currentStep > 4 ? <Text style={{ color: colors.background, fontSize: 14, fontWeight: 'bold' }}>✓</Text> : <Text style={[styles.stepNumber, currentStep === 4 && styles.stepNumberActive]}>4</Text>}
+              </View>
+            </View>
           </View>
 
           <ScrollView
@@ -474,12 +412,7 @@ export default function AddListingScreen() {
               onPress={handleBack}
               disabled={submitting}
             >
-              <IconSymbol
-                android_material_icon_name="arrow-back"
-                ios_icon_name="arrow.left"
-                size={24}
-                color={colors.text}
-              />
+              <Text style={{ fontSize: 20 }}>←</Text>
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
 
@@ -493,12 +426,7 @@ export default function AddListingScreen() {
               ) : (
                 <>
                   <Text style={styles.nextButtonText}>{nextButtonText}</Text>
-                  <IconSymbol
-                    android_material_icon_name="arrow-forward"
-                    ios_icon_name="arrow.right"
-                    size={24}
-                    color={colors.background}
-                  />
+                  <Text style={{ fontSize: 20, color: colors.background }}>→</Text>
                 </>
               )}
             </TouchableOpacity>

@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Platform, ActivityIndicator, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
 import { IconSymbol } from '@/components/IconSymbol';
 import { supabase } from '@/lib/supabase';
-import { Service } from '@/types/database';
+import { Service, SpecialistPortfolioImage } from '@/types/database';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -15,6 +16,9 @@ export default function ProfileScreen() {
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [myListings, setMyListings] = useState<Service[]>([]);
   const [loadingListings, setLoadingListings] = useState(false);
+  const [portfolioImages, setPortfolioImages] = useState<SpecialistPortfolioImage[]>([]);
+  const [loadingPortfolio, setLoadingPortfolio] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const handleSignOut = async () => {
     console.log('User confirmed sign out');
@@ -45,9 +49,89 @@ export default function ProfileScreen() {
     }
   };
 
+  const fetchPortfolioImages = async () => {
+    if (!profile || profile.role !== 'specialist') return;
+
+    setLoadingPortfolio(true);
+    try {
+      const { data, error } = await supabase
+        .from('specialist_portfolio_images')
+        .select('*')
+        .eq('specialist_profile_id', profile.id)
+        .order('sort_order', { ascending: true });
+
+      if (error) throw error;
+      setPortfolioImages(data || []);
+    } catch (err) {
+      console.error('Error fetching portfolio:', err);
+    } finally {
+      setLoadingPortfolio(false);
+    }
+  };
+
+  const pickProfileImage = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Please allow access to your photo library to upload a profile picture.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setUploadingImage(true);
+        // For now, just show alert - actual upload would require Supabase storage setup
+        Alert.alert('Coming Soon', 'Profile image upload will be available soon!');
+        setUploadingImage(false);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+      setUploadingImage(false);
+    }
+  };
+
+  const pickPortfolioImage = async () => {
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permissionResult.granted) {
+        Alert.alert('Permission Required', 'Please allow access to your photo library to upload portfolio images.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setUploadingImage(true);
+        // For now, just show alert - actual upload would require Supabase storage setup
+        Alert.alert('Coming Soon', 'Portfolio image upload will be available soon!');
+        setUploadingImage(false);
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image');
+      setUploadingImage(false);
+    }
+  };
+
   useEffect(() => {
     if (user && profile) {
       fetchMyListings();
+      if (profile.role === 'specialist') {
+        fetchPortfolioImages();
+      }
     }
   }, [user, profile]);
 
@@ -99,14 +183,35 @@ export default function ProfileScreen() {
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.profileCard}>
-          <View style={styles.avatarContainer}>
-            <IconSymbol
-              ios_icon_name="person.circle.fill"
-              android_material_icon_name="account-circle"
-              size={80}
-              color={colors.primary}
-            />
-          </View>
+          <TouchableOpacity
+            style={styles.avatarContainer}
+            onPress={pickProfileImage}
+            disabled={uploadingImage}
+          >
+            {profile.avatar_url ? (
+              <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+            ) : (
+              <IconSymbol
+                ios_icon_name="person.circle.fill"
+                android_material_icon_name="account-circle"
+                size={80}
+                color={colors.primary}
+              />
+            )}
+            <View style={styles.avatarEditButton}>
+              <IconSymbol
+                ios_icon_name="camera.fill"
+                android_material_icon_name="photo-camera"
+                size={16}
+                color="#FFFFFF"
+              />
+            </View>
+            {uploadingImage && (
+              <View style={styles.uploadingOverlay}>
+                <ActivityIndicator color="#FFFFFF" />
+              </View>
+            )}
+          </TouchableOpacity>
           <Text style={styles.profileName}>{profile.full_name}</Text>
           <View style={[styles.roleBadge, { backgroundColor: roleColor + '20' }]}>
             <Text style={[styles.roleText, { color: roleColor }]}>{roleLabel}</Text>
@@ -197,6 +302,75 @@ export default function ProfileScreen() {
                       </Text>
                     )}
                   </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {profile.role === 'specialist' && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Portfolio Gallery</Text>
+              <TouchableOpacity
+                onPress={pickPortfolioImage}
+                style={styles.addButton}
+                disabled={uploadingImage}
+              >
+                <IconSymbol
+                  ios_icon_name="plus.circle.fill"
+                  android_material_icon_name="add-circle"
+                  size={24}
+                  color={uploadingImage ? colors.textSecondary : colors.primary}
+                />
+              </TouchableOpacity>
+            </View>
+
+            {loadingPortfolio ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.primary} />
+              </View>
+            ) : portfolioImages.length === 0 ? (
+              <View style={styles.emptyPortfolio}>
+                <IconSymbol
+                  ios_icon_name="photo.on.rectangle"
+                  android_material_icon_name="collections"
+                  size={48}
+                  color={colors.textSecondary}
+                />
+                <Text style={styles.emptyPortfolioText}>No portfolio images yet</Text>
+                <Text style={styles.emptyPortfolioSubText}>
+                  Showcase your work by adding photos of your completed projects
+                </Text>
+                <TouchableOpacity
+                  style={styles.addPortfolioButton}
+                  onPress={pickPortfolioImage}
+                  disabled={uploadingImage}
+                >
+                  <IconSymbol
+                    ios_icon_name="plus.circle.fill"
+                    android_material_icon_name="add-circle"
+                    size={20}
+                    color="#FFFFFF"
+                  />
+                  <Text style={styles.addPortfolioButtonText}>Add Portfolio Image</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.portfolioGrid}>
+                {portfolioImages.map((image) => (
+                  <View key={image.id} style={styles.portfolioItem}>
+                    <Image
+                      source={{ uri: image.image_url }}
+                      style={styles.portfolioImage}
+                      resizeMode="cover"
+                    />
+                    {image.title && (
+                      <Text style={styles.portfolioImageTitle} numberOfLines={1}>
+                        {image.title}
+                      </Text>
+                    )}
+                  </View>
                 ))}
               </View>
             )}
@@ -524,5 +698,92 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  avatarEditButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: colors.primary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: colors.card,
+  },
+  uploadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyPortfolio: {
+    alignItems: 'center',
+    padding: spacing.xl,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyPortfolioText: {
+    ...typography.h3,
+    marginTop: spacing.md,
+    color: colors.text,
+  },
+  emptyPortfolioSubText: {
+    ...typography.bodySecondary,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  addPortfolioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    gap: spacing.xs,
+  },
+  addPortfolioButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  portfolioGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  portfolioItem: {
+    width: '48%',
+    aspectRatio: 1,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  portfolioImage: {
+    width: '100%',
+    height: '100%',
+  },
+  portfolioImageTitle: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: spacing.xs,
+    color: '#FFFFFF',
+    fontSize: 12,
   },
 });
