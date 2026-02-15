@@ -12,7 +12,7 @@ import * as ImagePicker from 'expo-image-picker';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, refreshProfile } = useAuth();
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [myListings, setMyListings] = useState<Service[]>([]);
   const [loadingListings, setLoadingListings] = useState(false);
@@ -162,6 +162,9 @@ export default function ProfileScreen() {
           .eq('id', profile.id);
 
         if (updateError) throw updateError;
+
+        // Refresh the profile in AuthContext to update the UI globally
+        await refreshProfile();
       } else {
         const { error: insertError } = await supabase
           .from('specialist_portfolio_images')
@@ -173,6 +176,8 @@ export default function ProfileScreen() {
 
         if (insertError) throw insertError;
         fetchPortfolioImages();
+        // Also refresh profile to ensure all state is consistent
+        await refreshProfile();
       }
 
       setShowPreviewModal(false);
