@@ -576,7 +576,7 @@ export default function ProfileScreen() {
                   setSelectedBase64(null);
                 }}
                 disabled={uploadingImage}
-                activeOpacity={0.85}
+                activeOpacity={0.9}
               >
                 <Text style={styles.modalBtnSecondaryText}>Cancel</Text>
               </TouchableOpacity>
@@ -589,13 +589,13 @@ export default function ProfileScreen() {
                 ]}
                 onPress={handleSaveImage}
                 disabled={uploadingImage}
-                activeOpacity={0.85}
+                activeOpacity={0.9}
               >
                 {uploadingImage ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.modalBtnPrimaryText}>
-                    {previewType === 'profile' ? 'Save Photo' : 'Save to Portfolio'}
+                  <Text style={styles.modalBtnPrimaryText} numberOfLines={1}>
+                    {previewType === 'profile' ? 'Save' : 'Upload'}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -882,15 +882,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.sm,
     width: '100%',
-    marginTop: spacing.md,
   },
   modalBtn: {
     flex: 1,
-    paddingVertical: spacing.md,
+    height: 48,
     borderRadius: borderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    paddingHorizontal: spacing.md,
   },
   modalBtnSecondary: {
     backgroundColor: 'transparent',
@@ -900,20 +899,15 @@ const styles = StyleSheet.create({
   modalBtnSecondaryText: {
     ...typography.body,
     color: colors.textSecondary,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   modalBtnPrimary: {
     backgroundColor: colors.primary,
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
   },
   modalBtnPrimaryText: {
     ...typography.body,
     color: '#FFFFFF',
-    fontWeight: '800',
+    fontWeight: '700',
   },
   modalBtnDisabled: {
     opacity: 0.6,
