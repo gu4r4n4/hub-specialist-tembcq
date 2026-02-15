@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, TextInput, Alert } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
@@ -13,7 +12,7 @@ import { Order } from '@/types/database';
 export default function OrderReviewScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams();
-    const { user, profile } = useAuth();
+    const { profile } = useAuth();
 
     const [order, setOrder] = useState<Order | null>(null);
     const [loading, setLoading] = useState(true);
@@ -21,10 +20,11 @@ export default function OrderReviewScreen() {
 
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState('');
-    const [images, setImages] = useState<string[]>([]);
 
     useEffect(() => {
-        loadOrder();
+        if (id) {
+            loadOrder();
+        }
     }, [id]);
 
     const loadOrder = async () => {
@@ -34,6 +34,7 @@ export default function OrderReviewScreen() {
         }
 
         try {
+            console.log('Loading order for review:', id);
             const { data, error } = await supabase
                 .from('orders')
                 .select('*, service:services(*)')
@@ -44,19 +45,23 @@ export default function OrderReviewScreen() {
                 console.error('Error loading order:', error);
                 Alert.alert('Error', 'Could not load order details');
                 router.back();
-            } else {
-                setOrder(data);
-                // Check if already reviewed
-                const { data: existing } = await supabase
-                    .from('service_reviews')
-                    .select('id')
-                    .eq('order_id', id)
-                    .maybeSingle();
+                return;
+            }
 
-                if (existing) {
-                    Alert.alert('Already Reviewed', 'You have already left a review for this order.');
-                    router.back();
-                }
+            setOrder(data);
+
+            // Check if already reviewed
+            const { data: existing, error: existingError } = await supabase
+                .from('service_reviews')
+                .select('id')
+                .eq('order_id', id)
+                .maybeSingle();
+
+            if (existing) {
+                console.log('Order already reviewed');
+                Alert.alert('Already Reviewed', 'You have already left a review for this order.', [
+                    { text: 'OK', onPress: () => router.back() }
+                ]);
             }
         } catch (error) {
             console.error('Exception loading order:', error);
@@ -65,33 +70,12 @@ export default function OrderReviewScreen() {
         }
     };
 
-    const pickImages = async () => {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
-            Alert.alert('Permission needed', 'Please allow access to your photos to add images to your review.');
-            return;
-        }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsMultipleSelection: true,
-            quality: 0.8,
-            selectionLimit: 5,
-        });
-
-        if (!result.canceled && result.assets) {
-            const newImages = result.assets.map((asset: any) => asset.uri);
-            setImages(prev => [...prev, ...newImages].slice(0, 5));
-        }
-    };
-
-    const removeImage = (index: number) => {
-        setImages(prev => prev.filter((_, i) => i !== index));
-    };
-
     const handleSubmit = async () => {
         if (submitting) return;
-        if (!order || !profile) return;
+        if (!order || !profile) {
+            console.error('Submit failed: No order or profile');
+            return;
+        }
 
         if (rating === 0) {
             Alert.alert('Rating required', 'Please select a rating.');
@@ -106,8 +90,8 @@ export default function OrderReviewScreen() {
         setSubmitting(true);
 
         try {
-            // 1. Create review
-            const { data: review, error: reviewError } = await supabase
+            console.log('Submitting review for order:', order.id);
+            const { error: reviewError } = await supabase
                 .from('service_reviews')
                 .insert({
                     order_id: order.id,
@@ -116,46 +100,20 @@ export default function OrderReviewScreen() {
                     specialist_profile_id: order.specialist_profile_id,
                     rating,
                     comment: comment.trim() || null,
-                })
-                .select()
-                .single();
+                });
 
-            if (reviewError) throw reviewError;
-
-            // 2. Upload images
-            const uploadedPaths: string[] = [];
-            for (const uri of images) {
-                const fileExt = uri.split('.').pop() || 'jpg';
-                const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-                const storagePath = `reviews/${review.id}/${fileName}`;
-
-                const response = await fetch(uri);
-                const blob = await response.blob();
-
-                const { error: uploadError } = await supabase.storage
-                    .from('review-images')
-                    .upload(storagePath, blob);
-
-                if (!uploadError) {
-                    uploadedPaths.push(storagePath);
-                }
+            if (reviewError) {
+                console.error('Supabase review insert error:', reviewError);
+                throw reviewError;
             }
 
-            // 3. Create image records
-            if (uploadedPaths.length > 0) {
-                const imageRecords = uploadedPaths.map(path => ({
-                    review_id: review.id,
-                    storage_path: path,
-                }));
-                await supabase.from('service_review_images').insert(imageRecords);
-            }
-
+            console.log('Review submitted successfully');
             Alert.alert('Success', 'Thank you for your review!', [
                 { text: 'OK', onPress: () => router.back() }
             ]);
         } catch (error: any) {
             console.error('Error submitting review:', error);
-            Alert.alert('Error', error.message || 'Failed to submit review');
+            Alert.alert('Error', error.message || 'Failed to submit review. Please try again.');
         } finally {
             setSubmitting(false);
         }
@@ -169,12 +127,22 @@ export default function OrderReviewScreen() {
         );
     }
 
+    if (!order) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={styles.content}>
+                    <Text>Order not found</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
+
     return (
         <SafeAreaView style={styles.container}>
             <Stack.Screen options={{ title: 'Write a Review' }} />
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.content}>
                 <View style={styles.header}>
-                    <Text style={styles.serviceTitle}>{order?.service?.title}</Text>
+                    <Text style={styles.serviceTitle}>{order.service?.title}</Text>
                     <Text style={styles.instruction}>How was your experience?</Text>
                 </View>
 
@@ -205,26 +173,6 @@ export default function OrderReviewScreen() {
                         numberOfLines={6}
                         textAlignVertical="top"
                     />
-                </View>
-
-                <View style={styles.section}>
-                    <Text style={styles.label}>Photos (Optional)</Text>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagesList}>
-                        {images.map((uri, index) => (
-                            <View key={index} style={styles.imagePreviewContainer}>
-                                <Image source={{ uri }} style={styles.imagePreview} />
-                                <TouchableOpacity style={styles.removeImageButton} onPress={() => removeImage(index)}>
-                                    <IconSymbol ios_icon_name="xmark.circle.fill" android_material_icon_name="cancel" size={24} color="#FF3B30" />
-                                </TouchableOpacity>
-                            </View>
-                        ))}
-                        {images.length < 5 && (
-                            <TouchableOpacity style={styles.addImageButton} onPress={pickImages}>
-                                <IconSymbol ios_icon_name="photo" android_material_icon_name="add-photo-alternate" size={32} color={colors.primary} />
-                                <Text style={styles.addImageText}>Add Photos</Text>
-                            </TouchableOpacity>
-                        )}
-                    </ScrollView>
                 </View>
 
                 <TouchableOpacity
@@ -298,41 +246,6 @@ const styles = StyleSheet.create({
         minHeight: 120,
         borderWidth: 1,
         borderColor: colors.border,
-    },
-    imagesList: {
-        flexDirection: 'row',
-    },
-    imagePreviewContainer: {
-        position: 'relative',
-        marginRight: spacing.md,
-    },
-    imagePreview: {
-        width: 80,
-        height: 80,
-        borderRadius: borderRadius.sm,
-    },
-    removeImageButton: {
-        position: 'absolute',
-        top: -10,
-        right: -10,
-        backgroundColor: 'white',
-        borderRadius: 12,
-    },
-    addImageButton: {
-        width: 80,
-        height: 80,
-        borderRadius: borderRadius.sm,
-        borderWidth: 1,
-        borderColor: colors.primary,
-        borderStyle: 'dashed',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 4,
-    },
-    addImageText: {
-        fontSize: 10,
-        color: colors.primary,
-        fontWeight: '600',
     },
     submitButton: {
         backgroundColor: colors.primary,
