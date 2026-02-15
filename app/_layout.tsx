@@ -42,6 +42,8 @@ export default function RootLayout() {
         <AuthProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="auth/login" options={{ headerShown: true, title: "Login" }} />
             <Stack.Screen name="auth/register" options={{ headerShown: true, title: "Register" }} />
             <Stack.Screen name="service/[id]" options={{ headerShown: true, title: "Service Details" }} />
