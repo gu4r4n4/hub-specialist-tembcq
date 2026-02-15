@@ -13,6 +13,7 @@ export default function SearchScreen() {
     const [cities, setCities] = useState<string[]>([]);
     const [loadingCities, setLoadingCities] = useState(true);
     const [showLocationModal, setShowLocationModal] = useState(false);
+    const [searchFocused, setSearchFocused] = useState(false);
 
     useEffect(() => {
         fetchCities();
@@ -98,24 +99,42 @@ export default function SearchScreen() {
                 {/* Search Input */}
                 <View style={styles.section}>
                     <Text style={styles.label}>What service are you looking for?</Text>
-                    <View style={styles.searchInputContainer}>
-                        <IconSymbol
-                            ios_icon_name="magnifyingglass"
-                            android_material_icon_name="search"
-                            size={20}
-                            color={colors.textSecondary}
-                            style={styles.searchIcon}
-                        />
+                    <View style={[
+                        styles.searchInputContainer,
+                        searchFocused && styles.searchInputContainerFocused
+                    ]}>
+                        <View style={styles.searchIconContainer}>
+                            <IconSymbol
+                                ios_icon_name="magnifyingglass"
+                                android_material_icon_name="search"
+                                size={22}
+                                color={searchFocused ? colors.primary : colors.textSecondary}
+                            />
+                        </View>
                         <TextInput
                             style={styles.searchInput}
                             placeholder="e.g. Plumber, Electrician, Cleaner"
                             value={query}
                             onChangeText={setQuery}
                             placeholderTextColor={colors.textSecondary}
-                            autoFocus
+                            onFocus={() => setSearchFocused(true)}
+                            onBlur={() => setSearchFocused(false)}
                             onSubmitEditing={handleSearch}
                             returnKeyType="search"
                         />
+                        {query.length > 0 && (
+                            <TouchableOpacity
+                                onPress={() => setQuery('')}
+                                style={styles.clearButton}
+                            >
+                                <IconSymbol
+                                    ios_icon_name="xmark.circle.fill"
+                                    android_material_icon_name="cancel"
+                                    size={20}
+                                    color={colors.textSecondary}
+                                />
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
 
@@ -320,17 +339,32 @@ const styles = StyleSheet.create({
         borderWidth: 2,
         borderColor: colors.border,
         borderRadius: borderRadius.lg,
-        paddingHorizontal: spacing.md,
-        minHeight: 56,
+        paddingRight: spacing.md,
+        minHeight: 72,
     },
-    searchIcon: {
-        marginRight: spacing.sm,
+    searchInputContainerFocused: {
+        borderColor: colors.primary,
+        borderWidth: 2,
+    },
+    searchIconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: borderRadius.md,
+        backgroundColor: colors.textSecondary + '10',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginLeft: spacing.md,
+        marginRight: spacing.md,
     },
     searchInput: {
         flex: 1,
         fontSize: 16,
         color: colors.text,
-        paddingVertical: spacing.sm,
+        paddingVertical: spacing.md,
+    },
+    clearButton: {
+        padding: spacing.xs,
+        marginLeft: spacing.sm,
     },
     searchButton: {
         flexDirection: 'row',
