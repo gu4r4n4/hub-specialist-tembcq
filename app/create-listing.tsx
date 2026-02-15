@@ -157,6 +157,7 @@ export default function AddListingScreen() {
         description: description.trim(),
         price: priceEnabled ? parseFloat(price) : 0,
         currency: priceEnabled ? currency : 'USD',
+        city: location.trim() || null,
         is_active: true,
       };
 

@@ -35,6 +35,7 @@ export interface Service {
   description: string;
   price: number;
   currency: string;
+  city?: string;
   rating_avg: number;
   rating_count: number;
   is_active: boolean;
