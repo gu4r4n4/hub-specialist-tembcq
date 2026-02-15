@@ -31,3 +31,6 @@ ON public.service_reviews
 FOR SELECT
 TO anon, authenticated
 USING (true);
+
+-- OPTIONAL FIX: If your database has an OLD policy name from a previous migration, drop it too
+DROP POLICY IF EXISTS "service_reviews_insert_consumer_completed_order" ON public.service_reviews;
