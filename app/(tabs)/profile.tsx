@@ -9,26 +9,7 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { supabase } from '@/lib/supabase';
 import { Service, SpecialistPortfolioImage } from '@/types/database';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system';
 import { Keyboard } from 'react-native';
-
-const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
-  // Works on Web + React Native (Expo)
-  if (typeof atob === 'function') {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return bytes.buffer;
-  }
-
-  // RN fallback (if atob isn't defined)
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { decode: b64decode } = require('base-64');
-  const binary = b64decode(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes.buffer;
-};
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -40,7 +21,6 @@ export default function ProfileScreen() {
   const [loadingPortfolio, setLoadingPortfolio] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedBase64, setSelectedBase64] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewType, setPreviewType] = useState<'profile' | 'portfolio'>('profile');
 
@@ -117,7 +97,7 @@ export default function ProfileScreen() {
         allowsEditing: true,
         aspect: type === 'profile' ? [1, 1] : undefined,
         quality: 0.8,
-        base64: true,
+        base64: false,
       });
 
       console.log('[ImagePicker] result.canceled:', result.canceled);
@@ -125,7 +105,6 @@ export default function ProfileScreen() {
       if (!result.canceled && result.assets?.[0]) {
         console.log('[ImagePicker] image selected:', result.assets[0].uri.substring(0, 50) + '...');
         setSelectedImage(result.assets[0].uri);
-        setSelectedBase64(result.assets[0].base64 || null);
         setPreviewType(type);
         setShowPreviewModal(true);
       }
@@ -141,28 +120,28 @@ export default function ProfileScreen() {
     // Close keyboard and modal first for better UX
     Keyboard.dismiss();
     setShowPreviewModal(false);
+    const imageToUpload = selectedImage; // Keep a reference
+    setSelectedImage(null);
     setUploadingImage(true);
 
     try {
       console.log('Starting upload for:', previewType);
 
-      const fileExt = (selectedImage.split('.').pop() || 'jpg').toLowerCase();
+      const fileExt = (imageToUpload.split('.').pop() || 'jpg').toLowerCase();
       const contentType = fileExt === 'png' ? 'image/png' : 'image/jpeg';
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
       const bucket = previewType === 'profile' ? 'avatars' : 'portfolio';
 
       console.log('Upload details:', { bucket, fileName, contentType });
 
-      if (!selectedBase64) {
-        throw new Error('No base64 data returned from image picker');
-      }
-
-      const arrayBuffer = base64ToArrayBuffer(selectedBase64);
+      // Convert the picked image URI to a Blob (works on Expo Web + iOS/Android)
+      const res = await fetch(imageToUpload);
+      const blob = await res.blob();
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
-        .upload(fileName, arrayBuffer, {
-          contentType,
+        .upload(fileName, blob, {
+          contentType: blob.type || contentType,
           upsert: true,
         });
 
@@ -179,7 +158,7 @@ export default function ProfileScreen() {
         const { error: updateError } = await supabase
           .from('profiles')
           .update({ avatar_url: publicUrl })
-          .eq('id', profile.id); // More robust mapping to the specific profile record
+          .eq('id', profile.id);
 
         if (updateError) {
           console.error('Profile update error detail:', JSON.stringify(updateError, null, 2));
@@ -205,9 +184,6 @@ export default function ProfileScreen() {
         await refreshProfile();
       }
 
-      setSelectedImage(null);
-      setSelectedBase64(null);
-
       // Navigate to profile tab to see latest data
       router.replace('/(tabs)/profile');
 
@@ -220,6 +196,7 @@ export default function ProfileScreen() {
       }
       Alert.alert('Upload Failed', msg);
       // Re-open modal if it failed so user can try again
+      setSelectedImage(imageToUpload);
       setShowPreviewModal(true);
     } finally {
       setUploadingImage(false);
@@ -231,20 +208,17 @@ export default function ProfileScreen() {
       const u = new URL(publicUrl);
       const path = decodeURIComponent(u.pathname);
 
-      // Supabase public URL format:
       // /storage/v1/object/public/{bucket}/{objectPath}
       const marker1 = `/storage/v1/object/public/${bucket}/`;
       const i1 = path.indexOf(marker1);
       if (i1 !== -1) return path.slice(i1 + marker1.length);
 
-      // Fallback if URL is not the canonical public format
       const marker2 = `/${bucket}/`;
       const i2 = path.lastIndexOf(marker2);
       if (i2 !== -1) return path.slice(i2 + marker2.length);
 
       return null;
     } catch {
-      // final fallback for non-URL strings
       const marker = `/${bucket}/`;
       const idx = publicUrl.lastIndexOf(marker);
       if (idx === -1) return null;
@@ -265,24 +239,19 @@ export default function ProfileScreen() {
             if (!user || !profile) return;
 
             setUploadingImage(true);
-
-            // ✅ Optimistic UI: remove immediately
             setPortfolioImages(prev => prev.filter(img => img.id !== imageId));
 
             try {
-              // 1) Delete DB row FIRST (so UI is correct even if storage fails)
               const { error: dbError } = await supabase
                 .from('specialist_portfolio_images')
                 .delete()
                 .eq('id', imageId);
 
               if (dbError) {
-                // rollback optimistic UI if DB delete fails
                 await fetchPortfolioImages();
                 throw dbError;
               }
 
-              // 2) Delete from Storage (best effort)
               const storagePath = getStoragePathFromPublicUrl(imageUrl, 'portfolio');
               if (storagePath) {
                 const { error: storageError } = await supabase.storage
@@ -290,20 +259,13 @@ export default function ProfileScreen() {
                   .remove([storagePath]);
 
                 if (storageError) {
-                  // Don’t fail the whole delete if storage is blocked — DB is already clean
                   console.warn('Storage delete failed (DB row deleted):', storageError);
                 }
-              } else {
-                console.warn('Could not parse storage path from image_url:', imageUrl);
               }
 
-              // 3) Force “fresh data”
               await refreshProfile();
               await fetchPortfolioImages();
-
-              // 4) Force profile tab rerender (important: replace same route with param)
               router.replace({ pathname: '/(tabs)/profile', params: { t: String(Date.now()) } });
-
               Alert.alert('Success', 'Image removed from portfolio');
             } catch (e: any) {
               console.error('Delete failed:', e);
@@ -332,7 +294,7 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Profile</Text>
         </View>
-        <View style={styles.emptyContainer}>
+        <div style={styles.emptyContainer}>
           <IconSymbol
             ios_icon_name="person.circle"
             android_material_icon_name="account-circle"
@@ -358,7 +320,7 @@ export default function ProfileScreen() {
           >
             <Text style={styles.secondaryButtonText}>Create Account</Text>
           </TouchableOpacity>
-        </View>
+        </div>
       </SafeAreaView>
     );
   }
@@ -638,7 +600,6 @@ export default function ProfileScreen() {
                 onPress={() => {
                   setShowPreviewModal(false);
                   setSelectedImage(null);
-                  setSelectedBase64(null);
                 }}
                 disabled={uploadingImage}
                 activeOpacity={0.9}
@@ -728,6 +689,7 @@ const styles = StyleSheet.create({
     ...typography.h3,
     marginTop: spacing.lg,
     marginBottom: spacing.xl,
+    textAlign: 'center',
   },
   button: {
     backgroundColor: colors.primary,
@@ -770,6 +732,29 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginBottom: spacing.md,
+    position: 'relative',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  avatarEditButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: colors.primary,
+    padding: spacing.xs,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.card,
+  },
+  uploadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   profileName: {
     ...typography.h2,
@@ -812,79 +797,6 @@ const styles = StyleSheet.create({
   addButton: {
     padding: spacing.xs,
   },
-  loadingContainer: {
-    padding: spacing.xl,
-    alignItems: 'center',
-  },
-  emptyListings: {
-    backgroundColor: colors.card,
-    marginHorizontal: spacing.lg,
-    padding: spacing.xl,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  emptyListingsText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    marginTop: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  createListingButton: {
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.md,
-  },
-  createListingButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  listingsContainer: {
-    marginHorizontal: spacing.lg,
-    gap: spacing.md,
-  },
-  listingCard: {
-    backgroundColor: colors.card,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  listingHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
-  },
-  listingTitle: {
-    ...typography.body,
-    fontWeight: '600',
-    flex: 1,
-  },
-  categoryBadge: {
-    backgroundColor: colors.primary + '20',
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.sm,
-  },
-  categoryText: {
-    ...typography.caption,
-    color: colors.primary,
-    fontWeight: '600',
-  },
-  listingDescription: {
-    ...typography.bodySecondary,
-    marginBottom: spacing.sm,
-  },
-  listingPrice: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: '600',
-  },
   infoCard: {
     backgroundColor: colors.card,
     marginHorizontal: spacing.lg,
@@ -896,167 +808,95 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
   },
   infoLabel: {
-    ...typography.body,
-    fontWeight: '600',
+    ...typography.bodySecondary,
+    marginLeft: spacing.sm,
+    flex: 1,
   },
   infoValue: {
-    ...typography.bodySecondary,
-    flex: 1,
-    textAlign: 'right',
+    ...typography.body,
+    fontWeight: '600',
   },
-  signOutButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
+  listingsContainer: {
+    paddingHorizontal: spacing.lg,
+  },
+  listingCard: {
     backgroundColor: colors.card,
-    marginHorizontal: spacing.lg,
     padding: spacing.md,
     borderRadius: borderRadius.md,
+    marginBottom: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.error,
+    borderColor: colors.border,
   },
-  signOutText: {
+  listingHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  listingTitle: {
     ...typography.body,
-    color: colors.error,
+    fontWeight: '700',
+    flex: 1,
+  },
+  categoryBadge: {
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+  },
+  categoryText: {
+    fontSize: 10,
+    color: colors.primary,
     fontWeight: '600',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  modalContent: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    padding: spacing.lg,
-    width: '100%',
-    maxWidth: 400,
-  },
-  modalTitle: {
-    ...typography.h3,
+  listingDescription: {
+    ...typography.bodySecondary,
+    fontSize: 12,
     marginBottom: spacing.sm,
   },
-  modalText: {
+  listingPrice: {
     ...typography.body,
-    marginBottom: spacing.lg,
+    fontWeight: '700',
+    color: colors.primary,
   },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    width: '100%',
-  },
-  modalBtn: {
-    flex: 1,
-    height: 48,
+  emptyListings: {
+    backgroundColor: colors.card,
+    marginHorizontal: spacing.lg,
+    padding: spacing.xl,
     borderRadius: borderRadius.md,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  modalBtnSecondary: {
-    backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: colors.border,
   },
-  modalBtnSecondaryText: {
-    ...typography.body,
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  modalBtnPrimary: {
-    backgroundColor: colors.primary,
-  },
-  modalBtnPrimaryText: {
-    ...typography.body,
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  modalBtnDisabled: {
-    opacity: 0.6,
-  },
-  modalBtnDanger: {
-    backgroundColor: colors.error,
-  },
-  modalBtnDangerText: {
-    ...typography.body,
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  avatarImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  avatarEditButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: colors.primary,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: colors.card,
-  },
-  uploadingOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyPortfolio: {
-    alignItems: 'center',
-    padding: spacing.xl,
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  emptyPortfolioText: {
-    ...typography.h3,
-    marginTop: spacing.md,
-    color: colors.text,
-  },
-  emptyPortfolioSubText: {
+  emptyListingsText: {
     ...typography.bodySecondary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
   },
-  addPortfolioButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  createListingButton: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.md,
-    gap: spacing.xs,
+    borderRadius: borderRadius.sm,
   },
-  addPortfolioButtonText: {
+  createListingButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
     fontWeight: '600',
   },
   portfolioGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    paddingHorizontal: spacing.lg,
     gap: spacing.sm,
-    marginTop: spacing.sm,
   },
   portfolioItem: {
-    width: '48%',
+    width: '31%',
     aspectRatio: 1,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.sm,
     overflow: 'hidden',
+    position: 'relative',
     backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1065,63 +905,175 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  deleteIndicator: {
+    position: 'absolute',
+    top: spacing.xs,
+    right: spacing.xs,
+    backgroundColor: 'rgba(255, 59, 48, 0.8)',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
   portfolioImageTitle: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: spacing.xs,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 10,
+    padding: 2,
+    textAlign: 'center',
   },
-  previewModalContent: {
+  emptyPortfolio: {
     backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
+    marginHorizontal: spacing.lg,
     padding: spacing.xl,
-    width: '92%',
-    maxWidth: 420,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
+  },
+  emptyPortfolioText: {
+    ...typography.body,
+    fontWeight: '600',
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  emptyPortfolioSubText: {
+    ...typography.bodySecondary,
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  addPortfolioButton: {
+    flexDirection: 'row',
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  addPortfolioButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+    backgroundColor: colors.error + '10',
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.error + '30',
+    gap: spacing.sm,
+  },
+  signOutText: {
+    color: colors.error,
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  modalContent: {
+    backgroundColor: colors.card,
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  previewModalContent: {
+    backgroundColor: colors.card,
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalTitle: {
+    ...typography.h3,
+    marginBottom: spacing.sm,
+  },
+  modalText: {
+    ...typography.bodySecondary,
+    textAlign: 'center',
+    marginBottom: spacing.xl,
   },
   previewImageContainer: {
     width: '100%',
     aspectRatio: 1,
-    marginVertical: spacing.lg,
     borderRadius: borderRadius.md,
     overflow: 'hidden',
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
+    marginBottom: spacing.xl,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   previewAvatar: {
-    width: 200,
-    height: 200,
+    width: '60%',
+    aspectRatio: 1,
     borderRadius: 100,
   },
   previewPortfolio: {
     width: '100%',
     height: '100%',
   },
-  deleteIndicator: {
-    position: 'absolute',
-    top: spacing.xs,
-    right: spacing.xs,
-    backgroundColor: 'rgba(255, 0, 0, 0.6)',
-    borderRadius: 10,
-    width: 20,
-    height: 20,
-    justifyContent: 'center',
+  modalButtons: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: spacing.md,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
     alignItems: 'center',
-    zIndex: 10,
-    elevation: 10,
+  },
+  modalBtnPrimary: {
+    backgroundColor: colors.primary,
+  },
+  modalBtnPrimaryText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  modalBtnSecondary: {
+    backgroundColor: colors.secondary + '20',
+  },
+  modalBtnSecondaryText: {
+    color: colors.secondary,
+    fontWeight: '700',
+  },
+  modalBtnDanger: {
+    backgroundColor: colors.error,
+  },
+  modalBtnDangerText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  modalBtnDisabled: {
+    opacity: 0.6,
+  },
+  loadingContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
   },
 });
