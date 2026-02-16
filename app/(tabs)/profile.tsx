@@ -11,7 +11,24 @@ import { Service, SpecialistPortfolioImage } from '@/types/database';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { Keyboard } from 'react-native';
-import { decode } from 'base64-arraybuffer';
+
+const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
+  // Works on Web + React Native (Expo)
+  if (typeof atob === 'function') {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes.buffer;
+  }
+
+  // RN fallback (if atob isn't defined)
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { decode: b64decode } = require('base-64');
+  const binary = b64decode(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+};
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -140,7 +157,7 @@ export default function ProfileScreen() {
         throw new Error('No base64 data returned from image picker');
       }
 
-      const arrayBuffer = decode(selectedBase64);
+      const arrayBuffer = base64ToArrayBuffer(selectedBase64);
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from(bucket)
