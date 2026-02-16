@@ -22,9 +22,17 @@ export default function ServicesScreen() {
   }, [categories]);
 
   useEffect(() => {
-    console.log('ServicesScreen: Loading services');
+    if (params.category) {
+      setSelectedCategory(params.category as string);
+    } else if (params.category === '') {
+      setSelectedCategory(null);
+    }
+  }, [params.category]);
+
+  useEffect(() => {
+    console.log('ServicesScreen: Loading services', { selectedCategory, location: params.location });
     loadData();
-  }, [selectedCategory]);
+  }, [selectedCategory, params.location, params.search]);
 
   const loadData = async () => {
     if (!isSupabaseConfigured) {
@@ -40,8 +48,12 @@ export default function ServicesScreen() {
         .select('*, specialist:profiles!specialist_profile_id(*), category:categories(*)')
         .eq('is_active', true);
 
-      if (selectedCategory) {
+      if (selectedCategory && selectedCategory !== 'all') {
         servicesQuery = servicesQuery.eq('category_id', selectedCategory);
+      }
+
+      if (params.location && params.location !== '') {
+        servicesQuery = servicesQuery.eq('city', params.location);
       }
 
       if (params.search) {
