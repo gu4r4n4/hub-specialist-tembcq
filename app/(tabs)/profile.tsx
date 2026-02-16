@@ -13,7 +13,7 @@ import { Keyboard } from 'react-native';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, profile, signOut, refreshProfile } = useAuth();
+  const { user, profile, loading, signOut, refreshProfile } = useAuth();
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const [myListings, setMyListings] = useState<Service[]>([]);
   const [loadingListings, setLoadingListings] = useState(false);
@@ -23,6 +23,13 @@ export default function ProfileScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewType, setPreviewType] = useState<'profile' | 'portfolio'>('profile');
+
+  useEffect(() => {
+    if (!loading && (!user || !profile)) {
+      console.log('ProfileScreen: User not authenticated, forcing login');
+      router.replace('/auth/login');
+    }
+  }, [loading, user, profile]);
 
   useEffect(() => {
     console.log('MODALS STATE:', { showPreviewModal, showSignOutModal });
@@ -288,39 +295,12 @@ export default function ProfileScreen() {
     }
   }, [user, profile]);
 
-  if (!user || !profile) {
+  if (loading || !user || !profile) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Profile</Text>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
-        <div style={styles.emptyContainer}>
-          <IconSymbol
-            ios_icon_name="person.circle"
-            android_material_icon_name="account-circle"
-            size={64}
-            color={colors.textSecondary}
-          />
-          <Text style={styles.emptyTitle}>Sign in to view your profile</Text>
-          <TouchableOpacity
-            style={styles.button}
-            onPress={() => {
-              console.log('User tapped Sign In button');
-              router.push('/auth/login');
-            }}
-          >
-            <Text style={styles.buttonText}>Sign In</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => {
-              console.log('User tapped Register button');
-              router.push('/auth/register');
-            }}
-          >
-            <Text style={styles.secondaryButtonText}>Create Account</Text>
-          </TouchableOpacity>
-        </div>
       </SafeAreaView>
     );
   }
