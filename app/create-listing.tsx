@@ -11,6 +11,8 @@ import {
   Switch,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -43,6 +45,7 @@ export default function AddListingScreen() {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   useEffect(() => {
     console.log('AddListingScreen: Loading categories');
@@ -186,40 +189,44 @@ export default function AddListingScreen() {
   const renderStep2 = () => {
     const stepTitle = 'Select Category';
     const stepDescription = 'What type of service is this?';
+    const selectedCat = categories.find(c => c.id === selectedCategory);
 
     return (
       <View style={styles.stepContent}>
         <Text style={styles.stepTitle}>{stepTitle}</Text>
         <Text style={styles.stepDescription}>{stepDescription}</Text>
 
-        {loading ? (
-          <ActivityIndicator size="large" color={colors.primary} style={styles.loader} />
-        ) : (
-          <ScrollView style={styles.categoriesScroll} showsVerticalScrollIndicator={false}>
-            <View style={styles.categoriesGrid}>
-              {categories.map((category: Category) => {
-                const isSelected = selectedCategory === category.id;
-
-                return (
-                  <TouchableOpacity
-                    key={category.id}
-                    style={[
-                      styles.categoryCard,
-                      isSelected && styles.categoryCardSelected,
-                    ]}
-                    onPress={() => {
-                      console.log('User selected category:', category.name);
-                      setSelectedCategory(category.id);
-                      setError('');
-                    }}
-                  >
-                    <Text style={styles.categoryName}>{category.name}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
-        )}
+        <TouchableOpacity
+          style={styles.locationButton}
+          onPress={() => setShowCategoryModal(true)}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.locationIconContainer, { backgroundColor: colors.primary + '15' }]}>
+            <IconSymbol
+              ios_icon_name="tag.fill"
+              android_material_icon_name="sell"
+              size={22}
+              color={colors.primary}
+            />
+          </View>
+          <View style={styles.locationTextContainer}>
+            <Text style={styles.locationLabel}>Category</Text>
+            <Text style={styles.locationValue}>
+              {selectedCat?.name || 'Select a Category'}
+            </Text>
+            {!selectedCategory && (
+              <Text style={styles.selectorHint} numberOfLines={1}>
+                Tap to choose a category
+              </Text>
+            )}
+          </View>
+          <IconSymbol
+            ios_icon_name="chevron.down"
+            android_material_icon_name="expand-more"
+            size={20}
+            color={colors.textSecondary}
+          />
+        </TouchableOpacity>
       </View>
     );
   };
@@ -433,6 +440,86 @@ export default function AddListingScreen() {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* Category Modal */}
+      <Modal
+        visible={showCategoryModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCategoryModal(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowCategoryModal(false)}
+        >
+          <Pressable
+            style={styles.modalContent}
+            onStartShouldSetResponder={() => true}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Category</Text>
+              <TouchableOpacity
+                onPress={() => setShowCategoryModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <IconSymbol
+                  ios_icon_name="xmark.circle.fill"
+                  android_material_icon_name="cancel"
+                  size={28}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="large" color={colors.primary} />
+                  <Text style={styles.loadingText}>Loading categories...</Text>
+                </View>
+              ) : (
+                categories.map((cat) => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    style={[
+                      styles.locationOption,
+                      selectedCategory === cat.id && styles.locationOptionSelected
+                    ]}
+                    onPress={() => {
+                      setSelectedCategory(cat.id);
+                      setShowCategoryModal(false);
+                      setError('');
+                    }}
+                  >
+                    <View style={styles.locationOptionContent}>
+                      <IconSymbol
+                        ios_icon_name="tag.fill"
+                        android_material_icon_name="sell"
+                        size={22}
+                        color={selectedCategory === cat.id ? colors.primary : colors.textSecondary}
+                      />
+                      <Text style={[
+                        styles.locationOptionText,
+                        selectedCategory === cat.id && styles.locationOptionTextSelected
+                      ]}>
+                        {cat.name}
+                      </Text>
+                    </View>
+                    {selectedCategory === cat.id && (
+                      <IconSymbol
+                        ios_icon_name="checkmark.circle.fill"
+                        android_material_icon_name="check-circle"
+                        size={24}
+                        color={colors.primary}
+                      />
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </>
   );
 }
@@ -655,5 +742,110 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.background,
+  },
+  // Added search-style components
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    minHeight: 72,
+  },
+  locationIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  locationTextContainer: {
+    flex: 1,
+  },
+  locationLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  locationValue: {
+    ...typography.body,
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  selectorHint: {
+    ...typography.caption,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    maxHeight: '80%',
+    paddingBottom: spacing.xl,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  modalTitle: {
+    ...typography.h2,
+    fontSize: 20,
+  },
+  modalCloseButton: {
+    padding: spacing.xs,
+  },
+  modalScroll: {
+    paddingHorizontal: spacing.lg,
+  },
+  locationOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    marginVertical: spacing.xs,
+  },
+  locationOptionSelected: {
+    backgroundColor: colors.primary + '10',
+  },
+  locationOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  locationOptionText: {
+    ...typography.body,
+    fontSize: 16,
+    marginLeft: spacing.md,
+    color: colors.text,
+  },
+  locationOptionTextSelected: {
+    fontWeight: '600',
+    color: colors.primary,
+  },
+  loadingContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  loadingText: {
+    ...typography.bodySecondary,
+    marginTop: spacing.md,
   },
 });
