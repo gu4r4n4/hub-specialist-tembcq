@@ -88,6 +88,20 @@ export default function LoginScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.content}>
+            <TouchableOpacity
+              onPress={() => router.replace('/(tabs)/(home)')}
+              style={styles.backHomeButton}
+              disabled={loading}
+            >
+              <IconSymbol
+                ios_icon_name="house.fill"
+                android_material_icon_name="home"
+                size={24}
+                color={colors.textSecondary}
+              />
+              <Text style={styles.backHomeText}>Back Home</Text>
+            </TouchableOpacity>
+
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>Sign in to continue</Text>
 
@@ -191,7 +205,7 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SafeAreaView >
   );
 }
 
@@ -313,6 +327,17 @@ const styles = StyleSheet.create({
   link: {
     ...typography.body,
     color: colors.primary,
+    fontWeight: '600',
+  },
+  backHomeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+    alignSelf: 'flex-start',
+    gap: spacing.xs,
+  },
+  backHomeText: {
+    ...typography.bodySecondary,
     fontWeight: '600',
   },
 });
