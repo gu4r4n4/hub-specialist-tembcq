@@ -4,19 +4,12 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
-import { supabase } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export default function SearchScreen() {
     const router = useRouter();
 
-    // Safety check: if router isn't available, we can't do much.
-    // However, we'll log it instead of returning null to avoid blank screens
-    // if it's just a transient state.
-    if (!router) {
-        console.warn('SearchScreen: Router not yet available');
-    }
-
-    console.log('SearchScreen: Rendering');
+    console.log('SearchScreen: Component rendering', { isSupabaseConfigured });
     const [location, setLocation] = useState('');
     const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
     const [categoriesLoading, setCategoriesLoading] = useState(false);
@@ -27,6 +20,10 @@ export default function SearchScreen() {
     const [showLocationModal, setShowLocationModal] = useState(false);
 
     useEffect(() => {
+        if (!isSupabaseConfigured) {
+            console.warn('SearchScreen: Supabase not configured');
+            return;
+        }
         fetchCities();
         loadCategories();
     }, []);
@@ -93,6 +90,19 @@ export default function SearchScreen() {
         setLocation(city);
         setShowLocationModal(false);
     };
+
+    if (!isSupabaseConfigured) {
+        return (
+            <SafeAreaView style={styles.container}>
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
+                    <Text style={{ ...typography.h3, color: colors.text }}>Supabase Not Configured</Text>
+                    <Text style={{ ...typography.bodySecondary, marginTop: spacing.sm, textAlign: 'center', color: colors.textSecondary }}>
+                        Please configure Supabase credentials to use Search.
+                    </Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView style={styles.container}>
