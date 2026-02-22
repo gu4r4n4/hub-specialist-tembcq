@@ -183,18 +183,34 @@ export default function OrderDetailScreen() {
           </View>
         )}
 
-        {isConsumer && order.status === 'done' && canLeaveReview && (
-          <View style={styles.actionSection}>
-            <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push(`/order/${order.id}/review`)}>
-              <Text style={styles.primaryBtnText}>Leave a Review</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
         {isSpecialist && order.status === 'new' && (
           <View style={styles.actionSection}>
             <TouchableOpacity style={styles.primaryBtn} onPress={() => handleStatusUpdate('confirmed')} disabled={updating}>
               <Text style={styles.primaryBtnText}>Confirm Order</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {isSpecialist && order.status === 'confirmed' && (
+          <View style={styles.actionSection}>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => handleStatusUpdate('in_progress')} disabled={updating}>
+              <Text style={styles.primaryBtnText}>Start Working</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {isSpecialist && order.status === 'in_progress' && (
+          <View style={styles.actionSection}>
+            <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.success }]} onPress={() => handleStatusUpdate('done')} disabled={updating}>
+              <Text style={styles.primaryBtnText}>Mark as Completed</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {isConsumer && order.status === 'done' && canLeaveReview && (
+          <View style={styles.actionSection}>
+            <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push(`/order/${order.id}/review`)}>
+              <Text style={styles.primaryBtnText}>Leave a Review</Text>
             </TouchableOpacity>
           </View>
         )}
