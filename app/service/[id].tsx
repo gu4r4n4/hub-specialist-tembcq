@@ -173,7 +173,9 @@ export default function ServiceDetailScreen() {
           </View>
 
           <Text style={styles.title}>{service.title}</Text>
-          <Text style={styles.price}>{service.currency} {service.price.toFixed(2)}</Text>
+          {service.price > 0 && (
+            <Text style={styles.price}>{service.currency} {service.price.toFixed(2)}</Text>
+          )}
           <Text style={styles.description}>{service.description}</Text>
         </View>
 

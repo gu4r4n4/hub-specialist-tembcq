@@ -7,6 +7,7 @@ import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Profile, SpecialistPortfolioImage, Service } from '@/types/database';
 import { IconSymbol } from '@/components/IconSymbol';
+import * as Haptics from 'expo-haptics';
 
 // Helper to resolve image sources (handles both local and remote URLs)
 function resolveImageSource(source: string | number | ImageSourcePropType | undefined): ImageSourcePropType {
@@ -241,10 +242,26 @@ export default function SpecialistDetailScreen() {
                     <TouchableOpacity
                       style={styles.serviceCard}
                       onPress={() => {
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         console.log('User tapped service:', service.id);
                         router.push(`/service/${service.id}`);
                       }}
                     >
+                      {/* Portfolio Random Image */}
+                      {(() => {
+                        if (portfolioImages.length > 0) {
+                          // Deterministic random image from the specialist's portfolio
+                          const imageIndex = (service.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) + index) % portfolioImages.length;
+                          const randomImage = portfolioImages[imageIndex].image_url;
+                          return (
+                            <View style={styles.cardImageContainer}>
+                              <Image source={{ uri: randomImage }} style={styles.cardImage} />
+                            </View>
+                          );
+                        }
+                        return null;
+                      })()}
+
                       <View style={styles.serviceHeader}>
                         <Text style={styles.serviceTitle}>{service.title}</Text>
                         {service.price > 0 && (
@@ -408,6 +425,19 @@ const styles = StyleSheet.create({
     ...typography.h3,
     flex: 1,
     marginRight: spacing.sm,
+  },
+  cardImageContainer: {
+    width: '100%',
+    height: 150,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    marginBottom: spacing.md,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   servicePrice: {
     ...typography.body,

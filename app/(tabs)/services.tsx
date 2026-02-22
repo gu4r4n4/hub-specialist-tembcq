@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
@@ -45,7 +45,7 @@ export default function ServicesScreen() {
 
       let servicesQuery = supabase
         .from('services')
-        .select('*, specialist:profiles!specialist_profile_id(*), category:categories(*)')
+        .select('*, specialist:profiles!specialist_profile_id(*, portfolio:specialist_portfolio_images(*)), category:categories(*)')
         .eq('is_active', true);
 
       if (selectedCategory && selectedCategory !== 'all') {
@@ -82,6 +82,7 @@ export default function ServicesScreen() {
   };
 
   const handleServicePress = (serviceId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/service/${serviceId}`);
   };
 
@@ -179,9 +180,26 @@ export default function ServicesScreen() {
                   style={styles.serviceCard}
                   onPress={() => handleServicePress(service.id)}
                 >
+                  {(() => {
+                    const portfolio = (service.specialist as any)?.portfolio || [];
+                    if (portfolio.length > 0) {
+                      // Use a deterministic index based on service ID for stable "random" image
+                      const imageIndex = service.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % portfolio.length;
+                      const randomImage = portfolio[imageIndex].image_url;
+                      return (
+                        <View style={styles.cardImageContainer}>
+                          <Image source={{ uri: randomImage }} style={styles.cardImage} />
+                        </View>
+                      );
+                    }
+                    return null;
+                  })()}
+
                   <View style={styles.serviceHeader}>
                     <Text style={styles.serviceTitle} numberOfLines={1}>{service.title}</Text>
-                    <Text style={styles.servicePrice}>{priceText}</Text>
+                    {service.price > 0 && (
+                      <Text style={styles.servicePrice}>{priceText}</Text>
+                    )}
                   </View>
 
                   <Text style={styles.serviceDescription} numberOfLines={2}>
@@ -304,6 +322,19 @@ const styles = StyleSheet.create({
     fontSize: 18,
     flex: 1,
     marginRight: spacing.sm,
+  },
+  cardImageContainer: {
+    width: '100%',
+    height: 180,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    marginBottom: spacing.md,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   servicePrice: {
     ...typography.body,

@@ -86,7 +86,7 @@ export default function HomeScreen() {
           .limit(10),
         supabase
           .from('services')
-          .select('*, specialist:profiles!specialist_profile_id(*), category:categories(*)')
+          .select('*, specialist:profiles!specialist_profile_id(*, portfolio:specialist_portfolio_images(*)), category:categories(*)')
           .eq('is_active', true)
           .order('rating_avg', { ascending: false })
           .limit(6),
@@ -114,6 +114,7 @@ export default function HomeScreen() {
   };
 
   const handleServicePress = (serviceId: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/service/${serviceId}`);
   };
 
@@ -221,6 +222,21 @@ export default function HomeScreen() {
                     style={styles.serviceCard}
                     onPress={() => handleServicePress(service.id)}
                   >
+                    {(() => {
+                      const portfolio = (service.specialist as any)?.portfolio || [];
+                      if (portfolio.length > 0) {
+                        // Use a deterministic index based on service ID for stable "random" image
+                        const imageIndex = service.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % portfolio.length;
+                        const randomImage = portfolio[imageIndex].image_url;
+                        return (
+                          <View style={styles.cardImageContainer}>
+                            <Image source={{ uri: randomImage }} style={styles.cardImage} />
+                          </View>
+                        );
+                      }
+                      return null;
+                    })()}
+
                     <View style={styles.serviceHeader}>
                       <Text style={styles.serviceTitle} numberOfLines={1}>
                         {service.title}
@@ -429,6 +445,19 @@ const styles = StyleSheet.create({
     fontSize: 17,
     flex: 1,
     marginRight: spacing.sm,
+  },
+  cardImageContainer: {
+    width: '100%',
+    height: 150,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    marginBottom: spacing.md,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   servicePrice: {
     ...typography.body,
