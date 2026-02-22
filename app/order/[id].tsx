@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Modal, Alert, Image } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
@@ -122,7 +122,19 @@ export default function OrderDetailScreen() {
           <Text style={styles.sectionTitle}>{isConsumer ? 'Specialist' : 'Client'}</Text>
           <View style={styles.personRow}>
             <View style={styles.avatar}>
-              <IconSymbol ios_icon_name="person.fill" android_material_icon_name="person" size={20} color={colors.primary} />
+              {isConsumer ? (
+                order.specialist?.avatar_url ? (
+                  <Image source={{ uri: order.specialist.avatar_url }} style={styles.avatarImg} />
+                ) : (
+                  <IconSymbol ios_icon_name="person.fill" android_material_icon_name="person" size={20} color={colors.primary} />
+                )
+              ) : (
+                order.consumer?.avatar_url ? (
+                  <Image source={{ uri: order.consumer.avatar_url }} style={styles.avatarImg} />
+                ) : (
+                  <IconSymbol ios_icon_name="person.fill" android_material_icon_name="person" size={20} color={colors.primary} />
+                )
+              )}
             </View>
             <View style={styles.personInfo}>
               <Text style={styles.personName}>{isConsumer ? order.specialist?.full_name : order.consumer?.full_name}</Text>
@@ -324,6 +336,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImg: {
+    width: '100%',
+    height: '100%',
   },
   personInfo: {
     flex: 1,

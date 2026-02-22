@@ -172,12 +172,18 @@ export default function SpecialistDetailScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header Section */}
         <View style={styles.header}>
-          <IconSymbol
-            ios_icon_name="person.circle.fill"
-            android_material_icon_name="account-circle"
-            size={100}
-            color={colors.primary}
-          />
+          {specialist.avatar_url ? (
+            <Image source={{ uri: specialist.avatar_url }} style={styles.specialistAvatar} />
+          ) : (
+            <View style={styles.specialistAvatarPlaceholder}>
+              <IconSymbol
+                ios_icon_name="person.fill"
+                android_material_icon_name="person"
+                size={50}
+                color={colors.primary}
+              />
+            </View>
+          )}
           <Text style={styles.name}>{specialist.full_name}</Text>
           {specialist.city && <Text style={styles.city}>{specialist.city}</Text>}
 
@@ -378,6 +384,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+  },
+  specialistAvatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: colors.backgroundSecondary,
+  },
+  specialistAvatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
+    borderColor: colors.backgroundSecondary,
   },
   name: {
     ...typography.h1,
