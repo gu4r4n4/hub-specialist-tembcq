@@ -116,7 +116,14 @@ export default function SpecialistDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <Stack.Screen options={{ title: 'Specialist Profile' }} />
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.navBar}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <IconSymbol ios_icon_name="chevron.left" android_material_icon_name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.navTitle} numberOfLines={1}>Loading...</Text>
+          <View style={{ width: 44 }} />
+        </View>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={colors.primary} />
         </View>
@@ -127,7 +134,14 @@ export default function SpecialistDetailScreen() {
   if (!specialist) {
     return (
       <SafeAreaView style={styles.container}>
-        <Stack.Screen options={{ title: 'Specialist Not Found' }} />
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.navBar}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <IconSymbol ios_icon_name="chevron.left" android_material_icon_name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.navTitle} numberOfLines={1}>Error</Text>
+          <View style={{ width: 44 }} />
+        </View>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Specialist not found</Text>
         </View>
@@ -144,7 +158,17 @@ export default function SpecialistDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ title: specialist.full_name }} />
+      <Stack.Screen options={{ headerShown: false }} />
+
+      {/* Custom NavBar */}
+      <View style={styles.navBar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <IconSymbol ios_icon_name="chevron.left" android_material_icon_name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.navTitle} numberOfLines={1}>Pro Profile</Text>
+        <View style={{ width: 44 }} />
+      </View>
+
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Header Section */}
         <View style={styles.header}>
@@ -309,6 +333,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  navBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    backgroundColor: colors.background,
+    gap: spacing.md,
+  },
+  navTitle: {
+    flex: 1,
+    ...typography.h3,
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.backgroundSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
