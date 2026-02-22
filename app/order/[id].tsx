@@ -138,6 +138,30 @@ export default function OrderDetailScreen() {
           </View>
         </View>
 
+        {history.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Status History</Text>
+            <View style={styles.historyCard}>
+              {history.map((item, index) => (
+                <View key={item.id} style={styles.historyItem}>
+                  <View style={styles.timeline}>
+                    <View style={[styles.timelineDot, index === 0 && styles.timelineDotActive]} />
+                    {index < history.length - 1 && <View style={styles.timelineLine} />}
+                  </View>
+                  <View style={styles.historyContent}>
+                    <Text style={[styles.historyStatus, index === 0 && styles.historyStatusActive]}>
+                      {item.new_status.toUpperCase().replace('_', ' ')}
+                    </Text>
+                    <Text style={styles.historyDate}>
+                      {new Date(item.created_at).toLocaleDateString()} at {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         {isConsumer && order.status === 'done' && canLeaveReview && (
           <View style={styles.actionSection}>
             <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push(`/order/${order.id}/review`)}>
@@ -306,5 +330,57 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '700',
     fontSize: 16,
+  },
+  historyCard: {
+    backgroundColor: colors.background,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  timeline: {
+    width: 20,
+    alignItems: 'center',
+  },
+  timelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.border,
+    marginTop: 4,
+    zIndex: 2,
+  },
+  timelineDotActive: {
+    backgroundColor: colors.primary,
+    ringWidth: 4,
+    ringColor: colors.primaryLight,
+  },
+  timelineLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: colors.border,
+    marginVertical: 2,
+  },
+  historyContent: {
+    flex: 1,
+    paddingBottom: spacing.lg,
+  },
+  historyStatus: {
+    ...typography.body,
+    fontWeight: '700',
+    fontSize: 15,
+    color: colors.textSecondary,
+    marginBottom: 2,
+  },
+  historyStatusActive: {
+    color: colors.text,
+  },
+  historyDate: {
+    ...typography.caption,
+    color: colors.textTertiary,
   },
 });
