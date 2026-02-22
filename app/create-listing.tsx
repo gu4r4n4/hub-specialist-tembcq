@@ -13,8 +13,9 @@ import {
   Modal,
   Pressable,
 } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { IconSymbol } from '@/components/IconSymbol';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -22,12 +23,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Category } from '@/types/database';
 import * as Haptics from 'expo-haptics';
 
+const DRAFT_STORAGE_KEY = 'hub_specialist_listing_draft';
+
 export default function AddListingScreen() {
   const router = useRouter();
-  const { user, profile } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 4;
+  const totalSteps = 2;
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [location, setLocation] = useState('');
@@ -42,10 +45,19 @@ export default function AddListingScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(true);
 
   useEffect(() => {
     loadCategories();
+    restoreDraft();
   }, []);
+
+  // Save draft whenever important fields change
+  useEffect(() => {
+    if (!isRestoring) {
+      saveDraft();
+    }
+  }, [selectedCategory, location, priceEnabled, price, currency, title, description, currentStep, isRestoring]);
 
   const loadCategories = async () => {
     if (!isSupabaseConfigured) return;
@@ -64,28 +76,76 @@ export default function AddListingScreen() {
     }
   };
 
+  const saveDraft = async () => {
+    try {
+      const draft = {
+        selectedCategory,
+        location,
+        priceEnabled,
+        price,
+        currency,
+        title,
+        description,
+        currentStep,
+      };
+      await AsyncStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+    } catch (e) {
+      console.error('Failed to save draft:', e);
+    }
+  };
+
+  const restoreDraft = async () => {
+    try {
+      const savedDraft = await AsyncStorage.getItem(DRAFT_STORAGE_KEY);
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft);
+        setSelectedCategory(draft.selectedCategory);
+        setLocation(draft.location);
+        setPriceEnabled(draft.priceEnabled);
+        setPrice(draft.price);
+        setCurrency(draft.currency);
+        setTitle(draft.title);
+        setDescription(draft.description);
+        setCurrentStep(draft.currentStep || 1);
+      }
+    } catch (e) {
+      console.error('Failed to restore draft:', e);
+    } finally {
+      setIsRestoring(false);
+    }
+  };
+
+  const clearDraft = async () => {
+    try {
+      await AsyncStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch (e) {
+      console.error('Failed to clear draft:', e);
+    }
+  };
+
   const handleNext = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (currentStep === 1 && !selectedCategory) {
-      setError('Please select a category');
-      return;
-    }
-    if (currentStep === 2 && !location.trim()) {
-      setError('Please enter a location');
-      return;
-    }
-    if (currentStep === 3 && priceEnabled && !price.trim()) {
-      setError('Please enter a price');
-      return;
-    }
-    if (currentStep === 4 && (!title.trim() || !description.trim())) {
-      setError('Please fill in all fields');
-      return;
-    }
-    setError('');
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
+
+    if (currentStep === 1) {
+      if (!selectedCategory) {
+        setError('Please select a category');
+        return;
+      }
+      if (!location.trim()) {
+        setError('Please enter a location');
+        return;
+      }
+      if (priceEnabled && !price.trim()) {
+        setError('Please enter a price');
+        return;
+      }
+      setError('');
+      setCurrentStep(2);
     } else {
+      if (!title.trim() || !description.trim()) {
+        setError('Please fill in all details');
+        return;
+      }
       handleSubmit();
     }
   };
@@ -102,13 +162,16 @@ export default function AddListingScreen() {
 
   const handleSubmit = async () => {
     if (!user || !profile) {
-      router.push('/auth/login');
+      setError('Please sign in to post your listing');
+      router.push('/auth/login?redirect=/create-listing');
       return;
     }
+
     if (profile.role !== 'specialist') {
-      setError('Only specialists can create listings.');
+      setError('Only specialists can create listings. Please update your profile.');
       return;
     }
+
     setSubmitting(true);
     setError('');
     try {
@@ -124,6 +187,8 @@ export default function AddListingScreen() {
       };
       const { data, error } = await supabase.from('services').insert(serviceData).select().single();
       if (error) throw error;
+
+      await clearDraft();
       router.replace(`/service/${data.id}`);
     } catch (err: any) {
       setError(err.message || 'Failed to create listing');
@@ -134,63 +199,67 @@ export default function AddListingScreen() {
 
   const renderStep1 = () => (
     <View style={styles.stepContent}>
-      <Text style={styles.stepTitle}>Select Category</Text>
-      <Text style={styles.stepDescription}>What type of service is this?</Text>
+      <Text style={styles.stepTitle}>Basics</Text>
+      <Text style={styles.stepDescription}>What, where and for how much?</Text>
+
+      <Text style={styles.inputLabel}>Service Type</Text>
       <TouchableOpacity style={styles.selector} onPress={() => setShowCategoryModal(true)}>
-        <IconSymbol ios_icon_name="tag.fill" android_material_icon_name="sell" size={24} color={colors.primary} />
+        <IconSymbol ios_icon_name="tag.fill" android_material_icon_name="sell" size={20} color={colors.primary} />
         <View style={styles.selectorText}>
-          <Text style={styles.selectorLabel}>Category</Text>
-          <Text style={styles.selectorValue}>{categories.find(c => c.id === selectedCategory)?.name || 'Choose one...'}</Text>
+          <Text style={styles.selectorValue}>{categories.find(c => c.id === selectedCategory)?.name || 'Select Category'}</Text>
         </View>
         <IconSymbol ios_icon_name="chevron.down" android_material_icon_name="expand-more" size={20} color={colors.textTertiary} />
       </TouchableOpacity>
-    </View>
-  );
 
-  const renderStep2 = () => (
-    <View style={styles.stepContent}>
-      <Text style={styles.stepTitle}>Location</Text>
-      <Text style={styles.stepDescription}>Where is this service available?</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter city or area"
-        value={location}
-        onChangeText={text => { setLocation(text); setError(''); }}
-        autoCapitalize="words"
-      />
-    </View>
-  );
+      <Text style={[styles.inputLabel, { marginTop: spacing.lg }]}>Location</Text>
+      <View style={styles.inputWrapper}>
+        <IconSymbol ios_icon_name="mappin.and.ellipse" android_material_icon_name="place" size={20} color={colors.primary} style={styles.inputIcon} />
+        <TextInput
+          style={styles.inputWithIcon}
+          placeholder="City or Service Area"
+          value={location}
+          onChangeText={text => { setLocation(text); setError(''); }}
+          autoCapitalize="words"
+        />
+      </View>
 
-  const renderStep3 = () => (
-    <View style={styles.stepContent}>
-      <Text style={styles.stepTitle}>Pricing</Text>
-      <Text style={styles.stepDescription}>Set your price (optional)</Text>
-      <View style={styles.toggleRow}>
-        <Text style={styles.toggleText}>Enable Pricing</Text>
+      <View style={[styles.toggleRow, { marginTop: spacing.lg }]}>
+        <View>
+          <Text style={styles.toggleText}>Set Pricing</Text>
+          <Text style={styles.toggleSubtext}>Leave off for "Price on request"</Text>
+        </View>
         <Switch value={priceEnabled} onValueChange={setPriceEnabled} trackColor={{ false: colors.border, true: colors.primary }} />
       </View>
+
       {priceEnabled && (
         <View style={styles.priceRow}>
-          <TextInput style={[styles.input, { flex: 1 }]} placeholder="0.00" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
-          <TextInput style={[styles.input, { width: 80 }]} value={currency} onChangeText={setCurrency} autoCapitalize="characters" maxLength={3} />
+          <View style={[styles.inputWrapper, { flex: 1 }]}>
+            <Text style={styles.currencyPrefix}>$</Text>
+            <TextInput style={styles.inputWithPrefix} placeholder="0.00" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
+          </View>
+          <TextInput style={[styles.input, { width: 80, marginBottom: 0 }]} value={currency} onChangeText={setCurrency} autoCapitalize="characters" maxLength={3} />
         </View>
       )}
     </View>
   );
 
-  const renderStep4 = () => (
+  const renderStep2 = () => (
     <View style={styles.stepContent}>
-      <Text style={styles.stepTitle}>Listing Details</Text>
-      <Text style={styles.stepDescription}>Tell us about your offer</Text>
+      <Text style={styles.stepTitle}>Details</Text>
+      <Text style={styles.stepDescription}>Finalize your listing description</Text>
+
+      <Text style={styles.inputLabel}>Listing Title</Text>
       <TextInput
         style={styles.input}
-        placeholder="Catchy Title"
+        placeholder="e.g. Professional Home Cleaning"
         value={title}
         onChangeText={setTitle}
       />
+
+      <Text style={styles.inputLabel}>Description</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
-        placeholder="Detailed Description"
+        placeholder="Describe your service, experience, and what's included..."
         value={description}
         onChangeText={setDescription}
         multiline
@@ -203,7 +272,7 @@ export default function AddListingScreen() {
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
           <IconSymbol ios_icon_name="chevron.left" android_material_icon_name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={styles.stepLabels}>
@@ -216,11 +285,7 @@ export default function AddListingScreen() {
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-          {currentStep === 1 && renderStep1()}
-          {currentStep === 2 && renderStep2()}
-          {currentStep === 3 && renderStep3()}
-          {currentStep === 4 && renderStep4()}
-
+          {currentStep === 1 ? renderStep1() : renderStep2()}
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </ScrollView>
 
@@ -229,7 +294,7 @@ export default function AddListingScreen() {
             <Text style={styles.secondaryBtnText}>{currentStep === 1 ? 'Cancel' : 'Back'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.primaryBtn} onPress={handleNext} disabled={submitting}>
-            {submitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryBtnText}>{currentStep === totalSteps ? 'Post Listing' : 'Continue'}</Text>}
+            {submitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryBtnText}>{currentStep === totalSteps ? 'Post Listing' : 'Next Step'}</Text>}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -307,34 +372,67 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stepTitle: {
-    ...typography.h2,
-    fontSize: 28,
+    ...typography.h1,
+    fontSize: 32,
     marginBottom: 8,
   },
   stepDescription: {
     ...typography.bodySecondary,
-    marginBottom: spacing.xxl,
+    marginBottom: spacing.xl,
+  },
+  inputLabel: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    marginBottom: 8,
+    marginLeft: 4,
   },
   selector: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.md,
     padding: spacing.md,
     gap: spacing.md,
   },
   selectorText: {
     flex: 1,
   },
-  selectorLabel: {
-    ...typography.caption,
-    color: colors.textSecondary,
-  },
   selectorValue: {
     ...typography.body,
     fontWeight: '600',
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  inputIcon: {
+    marginLeft: spacing.md,
+  },
+  inputWithIcon: {
+    flex: 1,
+    padding: spacing.md,
+    fontSize: 16,
+    color: colors.text,
+  },
+  currencyPrefix: {
+    marginLeft: spacing.md,
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  inputWithPrefix: {
+    flex: 1,
+    padding: spacing.md,
+    paddingLeft: 4,
+    fontSize: 16,
+    color: colors.text,
   },
   input: {
     backgroundColor: colors.backgroundSecondary,
@@ -354,15 +452,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.lg,
   },
   toggleText: {
     ...typography.body,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+  toggleSubtext: {
+    ...typography.caption,
+    color: colors.textTertiary,
   },
   priceRow: {
     flexDirection: 'row',
     gap: spacing.md,
+    marginTop: spacing.md,
   },
   footer: {
     padding: spacing.lg,

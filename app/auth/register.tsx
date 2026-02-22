@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { redirect } = useLocalSearchParams();
   const { signUp, signInWithGoogle } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -31,7 +32,11 @@ export default function RegisterScreen() {
       setError(signUpError.message || 'Registration failed');
       setLoading(false);
     } else {
-      router.replace('/(tabs)/(home)');
+      if (redirect) {
+        router.replace(redirect as string);
+      } else {
+        router.replace('/(tabs)/(home)');
+      }
     }
   };
 
