@@ -75,7 +75,7 @@ export default function BookingScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.headerCard}>
           <Text style={styles.serviceTitle}>{service.title}</Text>
-          <Text style={styles.price}>{service.currency} {service.price.toFixed(2)}</Text>
+          {service.price > 0 && <Text style={styles.price}>{service.currency} {service.price.toFixed(2)}</Text>}
           <View style={styles.divider} />
           <Text style={styles.specialistName}>Pro: {service.specialist?.full_name}</Text>
         </View>
