@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -8,6 +7,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Order } from '@/types/database';
 import { IconSymbol } from '@/components/IconSymbol';
+import * as Haptics from 'expo-haptics';
 
 export default function OrdersScreen() {
   const router = useRouter();
@@ -16,7 +16,6 @@ export default function OrdersScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('OrdersScreen: Loading orders');
     if (user && profile) {
       loadOrders();
     } else {
@@ -31,6 +30,7 @@ export default function OrdersScreen() {
     }
 
     try {
+      setLoading(true);
       let query = supabase
         .from('orders')
         .select('*, service:services(*), consumer:profiles!consumer_profile_id(*), specialist:profiles!specialist_profile_id(*)');
@@ -46,7 +46,6 @@ export default function OrdersScreen() {
       if (error) {
         console.error('Error loading orders:', error);
       } else {
-        console.log('Orders loaded:', data?.length);
         setOrders(data || []);
       }
     } catch (error) {
@@ -57,17 +56,17 @@ export default function OrdersScreen() {
   };
 
   const handleOrderPress = (orderId: string) => {
-    console.log('User tapped order:', orderId);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(`/order/${orderId}`);
   };
 
   const getStatusColor = (status: string) => {
     const statusColors: Record<string, string> = {
-      new: colors.statusNew,
-      confirmed: colors.statusConfirmed,
-      in_progress: colors.statusInProgress,
-      done: colors.statusDone,
-      cancelled: colors.statusCancelled,
+      new: colors.info,
+      confirmed: colors.success,
+      in_progress: colors.warning,
+      done: colors.textTertiary,
+      cancelled: colors.error,
     };
     return statusColors[status] || colors.textSecondary;
   };
@@ -90,19 +89,19 @@ export default function OrdersScreen() {
           <Text style={styles.title}>Orders</Text>
         </View>
         <View style={styles.emptyContainer}>
-          <IconSymbol
-            ios_icon_name="list.bullet.rectangle"
-            android_material_icon_name="receipt"
-            size={64}
-            color={colors.textSecondary}
-          />
+          <View style={styles.emptyIconContainer}>
+            <IconSymbol
+              ios_icon_name="lock.fill"
+              android_material_icon_name="lock"
+              size={48}
+              color={colors.primary}
+            />
+          </View>
           <Text style={styles.emptyTitle}>Sign in to view orders</Text>
+          <Text style={styles.emptyText}>You need to be logged in to track your service requests.</Text>
           <TouchableOpacity
-            style={styles.button}
-            onPress={() => {
-              console.log('User tapped Sign In button');
-              router.push('/auth/login');
-            }}
+            style={styles.primaryButton}
+            onPress={() => router.push('/auth/login')}
           >
             <Text style={styles.buttonText}>Sign In</Text>
           </TouchableOpacity>
@@ -137,10 +136,10 @@ export default function OrdersScreen() {
         {orders.length === 0 ? (
           <View style={styles.emptyContainer}>
             <IconSymbol
-              ios_icon_name="list.bullet.rectangle"
+              ios_icon_name="receipt"
               android_material_icon_name="receipt"
               size={64}
-              color={colors.textSecondary}
+              color={colors.textTertiary}
             />
             <Text style={styles.emptyTitle}>No orders yet</Text>
             <Text style={styles.emptyText}>
@@ -149,64 +148,51 @@ export default function OrdersScreen() {
           </View>
         ) : (
           <React.Fragment>
-            {orders.map((order, index) => {
+            {orders.map((order) => {
               const serviceTitle = order.service?.title || 'Unknown Service';
               const otherPersonName = profile?.role === 'consumer' ? order.specialist?.full_name : order.consumer?.full_name;
-              const otherPersonLabel = profile?.role === 'consumer' ? 'Specialist' : 'Client';
-              const scheduledDate = new Date(order.scheduled_at).toLocaleDateString();
+              const scheduledDate = new Date(order.scheduled_at).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+              });
               const statusLabel = getStatusLabel(order.status);
               const statusColor = getStatusColor(order.status);
 
               return (
                 <TouchableOpacity
-                  key={index}
+                  key={order.id}
                   style={styles.orderCard}
                   onPress={() => handleOrderPress(order.id)}
                 >
                   <View style={styles.orderHeader}>
-                    <Text style={styles.orderTitle}>{serviceTitle}</Text>
-                    <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+                    <View style={styles.titleContainer}>
+                      <Text style={styles.orderTitle} numberOfLines={1}>{serviceTitle}</Text>
+                      <Text style={styles.otherPersonName}>{otherPersonName}</Text>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: statusColor + '10' }]}>
                       <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
                     </View>
                   </View>
-                  <View style={styles.orderInfo}>
-                    <IconSymbol
-                      ios_icon_name="person.fill"
-                      android_material_icon_name="person"
-                      size={16}
-                      color={colors.textSecondary}
-                    />
-                    <Text style={styles.orderInfoText}>{otherPersonLabel}:</Text>
-                    <Text style={styles.orderInfoText}>{otherPersonName}</Text>
-                  </View>
-                  <View style={styles.orderInfo}>
-                    <IconSymbol
-                      ios_icon_name="calendar"
-                      android_material_icon_name="event"
-                      size={16}
-                      color={colors.textSecondary}
-                    />
-                    <Text style={styles.orderInfoText}>{scheduledDate}</Text>
-                  </View>
-                  {order.address && (
-                    <View style={styles.orderInfo}>
-                      <IconSymbol
-                        ios_icon_name="location.fill"
-                        android_material_icon_name="location-on"
-                        size={16}
-                        color={colors.textSecondary}
-                      />
-                      <Text style={styles.orderInfoText} numberOfLines={1}>
-                        {order.address}
-                      </Text>
+
+                  <View style={styles.orderFooter}>
+                    <View style={styles.infoRow}>
+                      <IconSymbol ios_icon_name="calendar" android_material_icon_name="event" size={14} color={colors.textSecondary} />
+                      <Text style={styles.infoText}>{scheduledDate}</Text>
                     </View>
-                  )}
+                    {order.address && (
+                      <View style={styles.infoRow}>
+                        <IconSymbol ios_icon_name="mappin" android_material_icon_name="location-on" size={14} color={colors.textSecondary} />
+                        <Text style={styles.infoText} numberOfLines={1}>{order.address}</Text>
+                      </View>
+                    )}
+                  </View>
                 </TouchableOpacity>
               );
             })}
           </React.Fragment>
         )}
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -215,18 +201,23 @@ export default function OrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
-    padding: spacing.lg,
-    paddingTop: 48,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.background,
   },
   title: {
-    ...typography.h1,
+    ...typography.h2,
+    fontSize: 28,
   },
   subtitle: {
-    ...typography.bodySecondary,
-    marginTop: spacing.xs,
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '700',
+    marginTop: -4,
   },
   scrollView: {
     flex: 1,
@@ -241,37 +232,52 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
-    paddingTop: spacing.xl * 2,
+    paddingTop: spacing.xxl,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
   emptyTitle: {
     ...typography.h3,
-    marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
   emptyText: {
     ...typography.bodySecondary,
     textAlign: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.xl,
   },
-  button: {
+  primaryButton: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
+    paddingHorizontal: spacing.xxl,
     borderRadius: borderRadius.md,
+    width: '100%',
+    alignItems: 'center',
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   orderCard: {
     backgroundColor: colors.card,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     padding: spacing.md,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
   },
   orderHeader: {
     flexDirection: 'row',
@@ -279,27 +285,45 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: spacing.md,
   },
-  orderTitle: {
-    ...typography.h3,
+  titleContainer: {
     flex: 1,
     marginRight: spacing.sm,
   },
+  orderTitle: {
+    ...typography.h3,
+    fontSize: 17,
+  },
+  otherPersonName: {
+    ...typography.bodySecondary,
+    fontSize: 13,
+  },
   statusBadge: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.sm,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: borderRadius.full,
   },
   statusText: {
-    ...typography.caption,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
-  orderInfo: {
+  orderFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.xs,
+    justifyContent: 'space-between',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: spacing.sm,
+    gap: spacing.md,
   },
-  orderInfoText: {
-    ...typography.bodySecondary,
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+  },
+  infoText: {
+    ...typography.caption,
+    fontSize: 12,
   },
 });

@@ -3,27 +3,33 @@ import { StyleSheet, ViewStyle, TextStyle } from 'react-native';
 
 // HUB SPECIALIST color palette - professional service marketplace theme
 export const colors = {
-  // Light theme
-  background: '#F8F9FA',
-  card: '#FFFFFF',
-  text: '#1A1A1A',
-  textSecondary: '#6B7280',
-  primary: '#3B82F6', // Blue - trust and professionalism
-  primaryDark: '#2563EB',
-  secondary: '#8B5CF6', // Purple - creativity
-  accent: '#10B981', // Green - success/confirmed
-  highlight: '#F59E0B', // Amber - attention/pending
-  border: '#E5E7EB',
-  error: '#EF4444',
-  warning: '#F59E0B',
-  success: '#10B981',
+  // Brand Colors (Inspired by profi.ru)
+  primary: '#FA2A48', // Vibrant Pinkish-Red
+  primaryLight: '#FFEBED',
+  primaryDark: '#D91F3D',
+  secondary: '#1A1A1A', // Deep Black for contrast
 
-  // Status colors
-  statusNew: '#3B82F6',
-  statusConfirmed: '#10B981',
-  statusInProgress: '#F59E0B',
-  statusDone: '#6B7280',
-  statusCancelled: '#EF4444',
+  // Base Colors
+  background: '#FFFFFF',
+  backgroundSecondary: '#F5F7FA',
+  card: '#FFFFFF',
+  border: '#EBEFF5',
+  borderDark: '#D1D9E6',
+
+  // Text Colors
+  text: '#121417',
+  textSecondary: '#5E6771',
+  textTertiary: '#94A3B8',
+
+  // Status Colors
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  info: '#3B82F6',
+
+  // Semantic Categories (using the red strategically)
+  accent: '#FA2A48',
+  highlight: '#FA2A48',
 };
 
 export const spacing = {

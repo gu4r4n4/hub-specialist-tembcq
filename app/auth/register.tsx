@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -6,12 +5,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
 import { UserRole } from '@/types/database';
-import { authClient } from '@/lib/auth-client';
 import { IconSymbol } from '@/components/IconSymbol';
+import * as Haptics from 'expo-haptics';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,225 +19,103 @@ export default function RegisterScreen() {
   const [error, setError] = useState('');
 
   const handleRegister = async () => {
-    console.log('User tapped Register button with role:', role);
-    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!fullName || !email || !password) {
       setError('Please fill in all fields');
       return;
     }
-
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
     setLoading(true);
     setError('');
-
     const { error: signUpError } = await signUp(email, password, role, fullName);
-
     if (signUpError) {
-      console.error('Registration failed:', signUpError);
-      setError(signUpError.message || 'Registration failed. Please try again.');
+      setError(signUpError.message || 'Registration failed');
       setLoading(false);
     } else {
-      console.log('Registration successful, navigating to home');
       router.replace('/(tabs)/(home)');
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    console.log('User tapped Google Sign In');
-    setLoading(true);
-    setError('');
-
-    try {
-      await authClient.signIn.social({
-        provider: 'google',
-        callbackURL: '/(tabs)/(home)',
-      });
-      console.log('Google sign-in initiated');
-    } catch (err: any) {
-      console.error('Google sign-in failed:', err);
-      setError(err.message || 'Google sign-in failed. Please try again.');
-      setLoading(false);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    console.log('User tapped Apple Sign In');
-    setLoading(true);
-    setError('');
-
-    try {
-      await authClient.signIn.social({
-        provider: 'apple',
-        callbackURL: '/(tabs)/(home)',
-      });
-      console.log('Apple sign-in initiated');
-    } catch (err: any) {
-      console.error('Apple sign-in failed:', err);
-      setError(err.message || 'Apple sign-in failed. Please try again.');
-      setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.content}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <IconSymbol ios_icon_name="chevron.left" android_material_icon_name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+
+          <View style={styles.header}>
             <Text style={styles.title}>Create Account</Text>
             <Text style={styles.subtitle}>Join HUB SPECIALIST today</Text>
+          </View>
 
-            {error ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
+          <View style={styles.form}>
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-            <View style={styles.socialButtons}>
+            <View style={styles.rolePicker}>
               <TouchableOpacity
-                style={[styles.socialButton, styles.googleButton]}
-                onPress={handleGoogleSignIn}
-                disabled={loading}
+                style={[styles.roleOption, role === 'consumer' && styles.roleOptionActive]}
+                onPress={() => setRole('consumer')}
               >
-                <IconSymbol
-                  ios_icon_name="g.circle.fill"
-                  android_material_icon_name="login"
-                  size={20}
-                  color="#FFFFFF"
-                />
-                <Text style={styles.socialButtonText}>Continue with Google</Text>
+                <Text style={[styles.roleText, role === 'consumer' && styles.roleTextActive]}>I'm a Client</Text>
               </TouchableOpacity>
-
-              {Platform.OS === 'ios' && (
-                <TouchableOpacity
-                  style={[styles.socialButton, styles.appleButton]}
-                  onPress={handleAppleSignIn}
-                  disabled={loading}
-                >
-                  <IconSymbol
-                    ios_icon_name="apple.logo"
-                    android_material_icon_name="login"
-                    size={20}
-                    color="#FFFFFF"
-                  />
-                  <Text style={styles.socialButtonText}>Continue with Apple</Text>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={[styles.roleOption, role === 'specialist' && styles.roleOptionActive]}
+                onPress={() => setRole('specialist')}
+              >
+                <Text style={[styles.roleText, role === 'specialist' && styles.roleTextActive]}>I'm a Pro</Text>
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
+            <View style={styles.inputCont}>
+              <Text style={styles.label}>Full Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="John Doe"
+                placeholderTextColor={colors.textTertiary}
+                value={fullName}
+                onChangeText={setFullName}
+              />
             </View>
 
-            <View style={styles.form}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Full Name</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="John Doe"
-                  placeholderTextColor={colors.textSecondary}
-                  value={fullName}
-                  onChangeText={setFullName}
-                  editable={!loading}
-                />
-              </View>
+            <View style={styles.inputCont}>
+              <Text style={styles.label}>Email Address</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="name@example.com"
+                placeholderTextColor={colors.textTertiary}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="your@email.com"
-                  placeholderTextColor={colors.textSecondary}
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  editable={!loading}
-                />
-              </View>
+            <View style={styles.inputCont}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Minimum 6 characters"
+                placeholderTextColor={colors.textTertiary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="At least 6 characters"
-                  placeholderTextColor={colors.textSecondary}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  editable={!loading}
-                />
-              </View>
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleRegister} disabled={loading}>
+              {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryBtnText}>Join Now</Text>}
+            </TouchableOpacity>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>I want to...</Text>
-                <View style={styles.roleContainer}>
-                  <TouchableOpacity
-                    style={[styles.roleButton, role === 'consumer' && styles.roleButtonActive]}
-                    onPress={() => {
-                      console.log('User selected Consumer role');
-                      setRole('consumer');
-                    }}
-                    disabled={loading}
-                  >
-                    <Text style={[styles.roleButtonText, role === 'consumer' && styles.roleButtonTextActive]}>
-                      Book Services
-                    </Text>
-                    <Text style={[styles.roleButtonSubtext, role === 'consumer' && styles.roleButtonSubtextActive]}>
-                      Consumer
-                    </Text>
-                  </TouchableOpacity>
+            <TouchableOpacity style={styles.socialBtn} onPress={() => signInWithGoogle()}>
+              <IconSymbol ios_icon_name="globe" android_material_icon_name="public" size={20} color={colors.text} />
+              <Text style={styles.socialBtnText}>Continue with Google</Text>
+            </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={[styles.roleButton, role === 'specialist' && styles.roleButtonActive]}
-                    onPress={() => {
-                      console.log('User selected Specialist role');
-                      setRole('specialist');
-                    }}
-                    disabled={loading}
-                  >
-                    <Text style={[styles.roleButtonText, role === 'specialist' && styles.roleButtonTextActive]}>
-                      Offer Services
-                    </Text>
-                    <Text style={[styles.roleButtonSubtext, role === 'specialist' && styles.roleButtonSubtextActive]}>
-                      Specialist
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
-                onPress={handleRegister}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.buttonText}>Create Account</Text>
-                )}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>Already have an account?</Text>
+              <TouchableOpacity onPress={() => router.push('/auth/login')}>
+                <Text style={styles.linkText}>Sign In</Text>
               </TouchableOpacity>
-
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>Already have an account?</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    console.log('User tapped Login link');
-                    router.push('/auth/login');
-                  }}
-                  disabled={loading}
-                >
-                  <Text style={styles.link}>Sign In</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
         </ScrollView>
@@ -252,151 +129,123 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  keyboardView: {
-    flex: 1,
-  },
   scrollContent: {
     flexGrow: 1,
-  },
-  content: {
-    flex: 1,
     padding: spacing.lg,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.backgroundSecondary,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  header: {
+    marginBottom: spacing.xxl,
   },
   title: {
     ...typography.h1,
-    marginBottom: spacing.xs,
+    fontSize: 32,
+    marginBottom: 8,
   },
   subtitle: {
     ...typography.bodySecondary,
-    marginBottom: spacing.xl,
-  },
-  errorContainer: {
-    backgroundColor: colors.error + '20',
-    padding: spacing.md,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.md,
-  },
-  errorText: {
-    color: colors.error,
-    fontSize: 14,
-  },
-  socialButtons: {
-    gap: spacing.md,
-    marginBottom: spacing.lg,
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-    gap: spacing.sm,
-  },
-  googleButton: {
-    backgroundColor: '#4285F4',
-  },
-  appleButton: {
-    backgroundColor: '#000000',
-  },
-  socialButtonText: {
-    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: spacing.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
-  dividerText: {
-    ...typography.bodySecondary,
-    marginHorizontal: spacing.md,
   },
   form: {
     gap: spacing.lg,
   },
-  inputGroup: {
-    gap: spacing.sm,
+  errorText: {
+    color: colors.error,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  rolePicker: {
+    flexDirection: 'row',
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.md,
+    padding: 4,
+    marginBottom: spacing.sm,
+  },
+  roleOption: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: borderRadius.sm,
+  },
+  roleOptionActive: {
+    backgroundColor: colors.background,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  roleText: {
+    fontWeight: '600',
+    color: colors.textTertiary,
+  },
+  roleTextActive: {
+    color: colors.primary,
+  },
+  inputCont: {
+    gap: 8,
   },
   label: {
-    ...typography.body,
-    fontWeight: '600',
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    marginLeft: 4,
   },
   input: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    fontSize: 16,
-    color: colors.text,
-  },
-  roleContainer: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  roleButton: {
-    flex: 1,
-    backgroundColor: colors.card,
-    borderWidth: 2,
-    borderColor: colors.border,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: borderRadius.md,
     padding: spacing.md,
-    alignItems: 'center',
-  },
-  roleButtonActive: {
-    borderColor: colors.primary,
-    backgroundColor: colors.primary + '10',
-  },
-  roleButtonText: {
-    ...typography.body,
-    fontWeight: '600',
+    fontSize: 16,
     color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  roleButtonTextActive: {
-    color: colors.primary,
-  },
-  roleButtonSubtext: {
-    ...typography.caption,
-    marginTop: spacing.xs,
-  },
-  roleButtonSubtextActive: {
-    color: colors.primary,
-  },
-  button: {
+  primaryBtn: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
     alignItems: 'center',
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
-  buttonDisabled: {
-    opacity: 0.6,
+  primaryBtnText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 18,
   },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  socialBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.md,
+  },
+  socialBtnText: {
     fontWeight: '600',
+    fontSize: 16,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.xs,
+    gap: 6,
+    marginTop: spacing.md,
   },
   footerText: {
     ...typography.bodySecondary,
   },
-  link: {
-    ...typography.body,
+  linkText: {
     color: colors.primary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

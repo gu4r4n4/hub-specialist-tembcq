@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
@@ -8,6 +7,8 @@ import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Service } from '@/types/database';
+import { IconSymbol } from '@/components/IconSymbol';
+import * as Haptics from 'expo-haptics';
 
 export default function BookingScreen() {
   const router = useRouter();
@@ -23,198 +24,119 @@ export default function BookingScreen() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    console.log('BookingScreen: Loading service', serviceId);
     loadService();
   }, [serviceId]);
 
   const loadService = async () => {
-    if (!isSupabaseConfigured || !serviceId) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('services')
-        .select('*, specialist:profiles!specialist_profile_id(*)')
-        .eq('id', serviceId)
-        .single();
-
-      if (error) {
-        console.error('Error loading service:', error);
-      } else {
-        setService(data);
-      }
-    } catch (error) {
-      console.error('Exception loading service:', error);
-    } finally {
-      setLoading(false);
-    }
+    if (!serviceId) return;
+    setLoading(true);
+    const { data } = await supabase.from('services').select('*, specialist:profiles!specialist_profile_id(*)').eq('id', serviceId).single();
+    if (data) setService(data);
+    setLoading(false);
   };
 
   const handleSubmit = async () => {
-    console.log('User tapped Book Service button');
-
-    if (!address.trim()) {
-      setError('Please enter an address');
-      return;
-    }
-
-    if (!profile || !service) {
-      setError('Missing profile or service data');
-      return;
-    }
-
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!address.trim()) { setError('Please enter an address'); return; }
+    if (!profile || !service) return;
     setSubmitting(true);
-    setError('');
-
-    try {
-      const { data, error: insertError } = await supabase
-        .from('orders')
-        .insert({
-          consumer_profile_id: profile.id,
-          specialist_profile_id: service.specialist_profile_id,
-          service_id: service.id,
-          status: 'new',
-          scheduled_at: scheduledDate.toISOString(),
-          address: address.trim(),
-          comment: comment.trim() || null,
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Error creating order:', insertError);
-        setError(insertError.message || 'Failed to create booking');
-        setSubmitting(false);
-      } else {
-        console.log('Order created successfully:', data);
-        router.replace(`/order/${data.id}`);
-      }
-    } catch (err) {
-      console.error('Exception creating order:', err);
-      setError('An error occurred. Please try again.');
-      setSubmitting(false);
-    }
+    const { data, error } = await supabase.from('orders').insert({
+      consumer_profile_id: profile.id,
+      specialist_profile_id: service.specialist_profile_id,
+      service_id: service.id,
+      status: 'new',
+      scheduled_at: scheduledDate.toISOString(),
+      address: address.trim(),
+      comment: comment.trim() || null,
+    }).select().single();
+    if (!error) router.replace(`/order/${data.id}`);
+    else { setError(error.message); setSubmitting(false); }
   };
 
-  if (loading) {
+  if (loading || !service) {
     return (
-      <SafeAreaView style={styles.container}>
-        <Stack.Screen options={{ title: 'Book Service' }} />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </SafeAreaView>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
     );
   }
-
-  if (!service) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Stack.Screen options={{ title: 'Service Not Found' }} />
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Service not found</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const dateText = scheduledDate.toLocaleDateString();
-  const timeText = scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
     <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ title: 'Book Service' }} />
-      <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
-        <View style={styles.serviceCard}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.navBar}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <IconSymbol ios_icon_name="chevron.left" android_material_icon_name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={styles.navTitle}>Complete Booking</Text>
+        <View style={{ width: 44 }} />
+      </View>
+
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <View style={styles.headerCard}>
           <Text style={styles.serviceTitle}>{service.title}</Text>
-          <Text style={styles.servicePrice}>
-            {service.currency} {service.price.toFixed(2)}
-          </Text>
-          <Text style={styles.specialistName}>
-            Specialist: {service.specialist?.full_name}
-          </Text>
+          <Text style={styles.price}>{service.currency} {service.price.toFixed(2)}</Text>
+          <View style={styles.divider} />
+          <Text style={styles.specialistName}>Pro: {service.specialist?.full_name}</Text>
         </View>
 
-        {error ? (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>{error}</Text>
-          </View>
-        ) : null}
-
         <View style={styles.form}>
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Scheduled Date & Time</Text>
-            <TouchableOpacity
-              style={styles.dateButton}
-              onPress={() => {
-                console.log('User tapped date picker');
-                setShowDatePicker(true);
-              }}
-            >
-              <Text style={styles.dateButtonText}>{dateText}</Text>
-              <Text style={styles.dateButtonText}>{timeText}</Text>
+            <Text style={styles.label}>Choose Date & Time</Text>
+            <TouchableOpacity style={styles.dateSelector} onPress={() => setShowDatePicker(true)}>
+              <IconSymbol ios_icon_name="calendar" android_material_icon_name="event" size={20} color={colors.primary} />
+              <Text style={styles.dateText}>
+                {scheduledDate.toLocaleDateString()} at {scheduledDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+              <IconSymbol ios_icon_name="chevron.down" android_material_icon_name="expand-more" size={18} color={colors.textTertiary} />
             </TouchableOpacity>
             {showDatePicker && (
               <DateTimePicker
                 value={scheduledDate}
                 mode="datetime"
-                display="default"
-                onChange={(event, selectedDate) => {
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={(e, date) => {
                   setShowDatePicker(Platform.OS === 'ios');
-                  if (selectedDate) {
-                    console.log('User selected date:', selectedDate);
-                    setScheduledDate(selectedDate);
-                  }
+                  if (date) setScheduledDate(date);
                 }}
               />
             )}
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Address *</Text>
+            <Text style={styles.label}>Service Address *</Text>
             <TextInput
               style={styles.input}
-              placeholder="Enter service address"
-              placeholderTextColor={colors.textSecondary}
+              placeholder="Where should we meet?"
               value={address}
               onChangeText={setAddress}
               multiline
-              numberOfLines={3}
-              editable={!submitting}
             />
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Additional Comments</Text>
+            <Text style={styles.label}>Notes for Pro (Optional)</Text>
             <TextInput
-              style={styles.input}
-              placeholder="Any special requests or notes..."
-              placeholderTextColor={colors.textSecondary}
+              style={[styles.input, styles.textArea]}
+              placeholder="Any special requests..."
               value={comment}
               onChangeText={setComment}
               multiline
               numberOfLines={4}
-              editable={!submitting}
             />
           </View>
-
-          <TouchableOpacity
-            style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.submitButtonText}>Confirm Booking</Text>
-            )}
-          </TouchableOpacity>
         </View>
 
-        <View style={{ height: 40 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity style={styles.bookButton} onPress={handleSubmit} disabled={submitting}>
+          {submitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.bookButtonText}>Confirm Booking</Text>}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -222,107 +144,133 @@ export default function BookingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.backgroundSecondary,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  navBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
     backgroundColor: colors.background,
+    gap: spacing.md,
+  },
+  navTitle: {
+    flex: 1,
+    ...typography.h3,
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.backgroundSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+  headerCard: {
+    backgroundColor: colors.background,
     padding: spacing.xl,
-  },
-  errorText: {
-    ...typography.bodySecondary,
-  },
-  serviceCard: {
-    backgroundColor: colors.card,
-    padding: spacing.lg,
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.lg,
-    marginBottom: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
+    marginBottom: spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    alignItems: 'center',
   },
   serviceTitle: {
-    ...typography.h3,
-    marginBottom: spacing.xs,
+    ...typography.h2,
+    fontSize: 24,
+    textAlign: 'center',
+    marginBottom: 4,
   },
-  servicePrice: {
-    ...typography.body,
+  price: {
+    ...typography.h2,
     color: colors.primary,
-    fontWeight: '700',
-    marginBottom: spacing.sm,
+    fontWeight: '800',
+  },
+  divider: {
+    width: 40,
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    marginVertical: spacing.lg,
   },
   specialistName: {
     ...typography.bodySecondary,
-  },
-  errorBanner: {
-    backgroundColor: colors.error + '20',
-    padding: spacing.md,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    borderRadius: borderRadius.sm,
-  },
-  errorBannerText: {
-    color: colors.error,
-    fontSize: 14,
+    fontWeight: '700',
   },
   form: {
     padding: spacing.lg,
-    gap: spacing.lg,
+    gap: spacing.xl,
   },
   inputGroup: {
-    gap: spacing.sm,
+    gap: 8,
   },
   label: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    marginLeft: 4,
+  },
+  dateSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dateText: {
+    flex: 1,
     ...typography.body,
     fontWeight: '600',
   },
   input: {
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
+    backgroundColor: colors.background,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
     fontSize: 16,
     color: colors.text,
-    textAlignVertical: 'top',
-  },
-  dateButton: {
-    backgroundColor: colors.card,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
   },
-  dateButtonText: {
-    ...typography.body,
+  textArea: {
+    height: 100,
+    textAlignVertical: 'top',
   },
-  submitButton: {
+  errorText: {
+    color: colors.error,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  footer: {
+    padding: spacing.lg,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  bookButton: {
     backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
     alignItems: 'center',
-    marginTop: spacing.md,
   },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
+  bookButtonText: {
+    color: '#FFF',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

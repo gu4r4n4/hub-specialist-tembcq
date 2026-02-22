@@ -18,6 +18,32 @@ import { AuthProvider } from "@/contexts/AuthContext";
 
 SplashScreen.preventAutoHideAsync();
 
+const CustomDefaultTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    primary: '#FA2A48',
+    background: '#FFFFFF',
+    card: '#FFFFFF',
+    text: '#121417',
+    border: '#EBEFF5',
+    notification: '#FA2A48',
+  },
+};
+
+const CustomDarkTheme = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    primary: '#FA2A48',
+    background: '#121417',
+    card: '#1C1C1E',
+    text: '#FFFFFF',
+    border: '#2C2C2E',
+    notification: '#FA2A48',
+  },
+};
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [loaded] = useFonts({
@@ -34,24 +60,26 @@ export default function RootLayout() {
     return null;
   }
 
+  const theme = colorScheme === "dark" ? CustomDarkTheme : CustomDefaultTheme;
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+      <ThemeProvider value={theme}>
         <SystemBars style="auto" />
         <StatusBar style="auto" />
         <AuthProvider>
           <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="index" options={{ headerShown: false }} />
-            <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
-            <Stack.Screen name="auth/login" options={{ headerShown: true, title: "Login" }} />
-            <Stack.Screen name="auth/register" options={{ headerShown: true, title: "Register" }} />
-            <Stack.Screen name="service/[id]" options={{ headerShown: true, title: "Service Details" }} />
-            <Stack.Screen name="specialist/[id]" options={{ headerShown: true, title: "Specialist Profile" }} />
-            <Stack.Screen name="booking/[serviceId]" options={{ headerShown: true, title: "Book Service" }} />
-            <Stack.Screen name="order/[id]" options={{ headerShown: true, title: "Order Details" }} />
-            <Stack.Screen name="search" options={{ presentation: 'modal', headerShown: false }} />
-            <Stack.Screen name="create-listing" options={{ headerShown: true, title: "Create Listing" }} />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="index" />
+            <Stack.Screen name="onboarding" options={{ gestureEnabled: false }} />
+            <Stack.Screen name="auth/login" />
+            <Stack.Screen name="auth/register" />
+            <Stack.Screen name="service/[id]" />
+            <Stack.Screen name="specialist/[id]" />
+            <Stack.Screen name="booking/[serviceId]" />
+            <Stack.Screen name="order/[id]" />
+            <Stack.Screen name="search" options={{ presentation: 'modal' }} />
+            <Stack.Screen name="create-listing" />
             <Stack.Screen name="+not-found" />
           </Stack>
         </AuthProvider>

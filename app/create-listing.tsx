@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -21,17 +20,15 @@ import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Category } from '@/types/database';
-
+import * as Haptics from 'expo-haptics';
 
 export default function AddListingScreen() {
   const router = useRouter();
   const { user, profile } = useAuth();
 
-  // Step tracking
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
 
-  // Form data
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [location, setLocation] = useState('');
   const [priceEnabled, setPriceEnabled] = useState(false);
@@ -40,7 +37,6 @@ export default function AddListingScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
-  // UI state
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -48,29 +44,20 @@ export default function AddListingScreen() {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   useEffect(() => {
-    console.log('AddListingScreen: Loading categories');
     loadCategories();
   }, []);
 
   const loadCategories = async () => {
-    if (!isSupabaseConfigured) {
-      console.log('Supabase not configured');
-      return;
-    }
-
+    if (!isSupabaseConfigured) return;
     setLoading(true);
     try {
       const { data, error } = await supabase
         .from('categories')
         .select('*')
         .order('display_order', { ascending: true });
-
       if (error) throw error;
-
-      console.log('Categories loaded:', data?.length);
       setCategories(data || []);
     } catch (err: any) {
-      console.error('Error loading categories:', err);
       setError('Failed to load categories');
     } finally {
       setLoading(false);
@@ -78,9 +65,7 @@ export default function AddListingScreen() {
   };
 
   const handleNext = () => {
-    console.log('User tapped Next button, current step:', currentStep);
-
-    // Validation for each step
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (currentStep === 1 && !selectedCategory) {
       setError('Please select a category');
       return;
@@ -90,16 +75,14 @@ export default function AddListingScreen() {
       return;
     }
     if (currentStep === 3 && priceEnabled && !price.trim()) {
-      setError('Please enter a price or disable pricing');
+      setError('Please enter a price');
       return;
     }
     if (currentStep === 4 && (!title.trim() || !description.trim())) {
       setError('Please fill in all fields');
       return;
     }
-
     setError('');
-
     if (currentStep < totalSteps) {
       setCurrentStep(currentStep + 1);
     } else {
@@ -108,7 +91,7 @@ export default function AddListingScreen() {
   };
 
   const handleBack = () => {
-    console.log('User tapped Back button');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
       setError('');
@@ -118,41 +101,17 @@ export default function AddListingScreen() {
   };
 
   const handleSubmit = async () => {
-    console.log('User tapped Post button, checking auth status');
-
-    // Check if user is logged in
     if (!user || !profile) {
-      console.log('User not logged in, redirecting to login');
       router.push('/auth/login');
       return;
     }
-
-    // Check if user has specialist role
     if (profile.role !== 'specialist') {
-      console.log('User is not a specialist');
-      setError('Only specialists can create service listings. Please update your profile role.');
+      setError('Only specialists can create listings.');
       return;
     }
-
-    console.log('User is logged in as specialist, submitting listing');
     setSubmitting(true);
     setError('');
-
     try {
-      // Update profile city if location was provided
-      if (location.trim()) {
-        console.log('Updating profile city to:', location);
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ city: location.trim() })
-          .eq('id', profile.id);
-
-        if (profileError) {
-          console.error('Error updating profile city:', profileError);
-          // Don't fail the whole operation, just log it
-        }
-      }
-
       const serviceData = {
         specialist_profile_id: profile.id,
         category_id: selectedCategory,
@@ -163,364 +122,140 @@ export default function AddListingScreen() {
         city: location.trim() || null,
         is_active: true,
       };
-
-      console.log('Creating service with data:', serviceData);
-
-      const { data, error } = await supabase
-        .from('services')
-        .insert(serviceData)
-        .select()
-        .single();
-
+      const { data, error } = await supabase.from('services').insert(serviceData).select().single();
       if (error) throw error;
-
-      console.log('Service created successfully:', data.id);
-
-      // Navigate to the created service
       router.replace(`/service/${data.id}`);
     } catch (err: any) {
-      console.error('Error creating service:', err);
       setError(err.message || 'Failed to create listing');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const renderStep2 = () => {
-    const stepTitle = 'Select Category';
-    const stepDescription = 'What type of service is this?';
-    const selectedCat = categories.find(c => c.id === selectedCategory);
-
-    return (
-      <View style={styles.stepContent}>
-        <Text style={styles.stepTitle}>{stepTitle}</Text>
-        <Text style={styles.stepDescription}>{stepDescription}</Text>
-
-        <TouchableOpacity
-          style={styles.locationButton}
-          onPress={() => setShowCategoryModal(true)}
-          activeOpacity={0.7}
-        >
-          <View style={[styles.locationIconContainer, { backgroundColor: colors.primary + '15' }]}>
-            <IconSymbol
-              ios_icon_name="tag.fill"
-              android_material_icon_name="sell"
-              size={22}
-              color={colors.primary}
-            />
-          </View>
-          <View style={styles.locationTextContainer}>
-            <Text style={styles.locationLabel}>Category</Text>
-            <Text style={styles.locationValue}>
-              {selectedCat?.name || 'Select a Category'}
-            </Text>
-            {!selectedCategory && (
-              <Text style={styles.selectorHint} numberOfLines={1}>
-                Tap to choose a category
-              </Text>
-            )}
-          </View>
-          <IconSymbol
-            ios_icon_name="chevron.down"
-            android_material_icon_name="expand-more"
-            size={20}
-            color={colors.textSecondary}
-          />
-        </TouchableOpacity>
-      </View>
-    );
-  };
-
-  const renderStep3 = () => {
-    const stepTitle = 'Location';
-    const stepDescription = 'Where is this service available?';
-
-    return (
-      <View style={styles.stepContent}>
-        <Text style={styles.stepTitle}>{stepTitle}</Text>
-        <Text style={styles.stepDescription}>{stepDescription}</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Enter city or area"
-          placeholderTextColor={colors.textSecondary}
-          value={location}
-          onChangeText={(text) => {
-            setLocation(text);
-            setError('');
-          }}
-          autoCapitalize="words"
-        />
-      </View>
-    );
-  };
-
-  const renderStep4 = () => {
-    const stepTitle = 'Pricing';
-    const stepDescription = 'Set your price (optional)';
-
-    return (
-      <View style={styles.stepContent}>
-        <Text style={styles.stepTitle}>{stepTitle}</Text>
-        <Text style={styles.stepDescription}>{stepDescription}</Text>
-
-        <View style={styles.toggleContainer}>
-          <Text style={styles.toggleLabel}>Enable Pricing</Text>
-          <Switch
-            value={priceEnabled}
-            onValueChange={(value) => {
-              console.log('User toggled pricing:', value);
-              setPriceEnabled(value);
-              setError('');
-            }}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor={colors.background}
-          />
+  const renderStep1 = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Select Category</Text>
+      <Text style={styles.stepDescription}>What type of service is this?</Text>
+      <TouchableOpacity style={styles.selector} onPress={() => setShowCategoryModal(true)}>
+        <IconSymbol ios_icon_name="tag.fill" android_material_icon_name="sell" size={24} color={colors.primary} />
+        <View style={styles.selectorText}>
+          <Text style={styles.selectorLabel}>Category</Text>
+          <Text style={styles.selectorValue}>{categories.find(c => c.id === selectedCategory)?.name || 'Choose one...'}</Text>
         </View>
+        <IconSymbol ios_icon_name="chevron.down" android_material_icon_name="expand-more" size={20} color={colors.textTertiary} />
+      </TouchableOpacity>
+    </View>
+  );
 
-        {priceEnabled && (
-          <View style={styles.priceInputContainer}>
-            <TextInput
-              style={[styles.input, styles.priceInput]}
-              placeholder="0.00"
-              placeholderTextColor={colors.textSecondary}
-              value={price}
-              onChangeText={(text) => {
-                setPrice(text);
-                setError('');
-              }}
-              keyboardType="decimal-pad"
-            />
-            <TextInput
-              style={[styles.input, styles.currencyInput]}
-              placeholder="USD"
-              placeholderTextColor={colors.textSecondary}
-              value={currency}
-              onChangeText={setCurrency}
-              autoCapitalize="characters"
-              maxLength={3}
-            />
-          </View>
-        )}
+  const renderStep2 = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Location</Text>
+      <Text style={styles.stepDescription}>Where is this service available?</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Enter city or area"
+        value={location}
+        onChangeText={text => { setLocation(text); setError(''); }}
+        autoCapitalize="words"
+      />
+    </View>
+  );
+
+  const renderStep3 = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Pricing</Text>
+      <Text style={styles.stepDescription}>Set your price (optional)</Text>
+      <View style={styles.toggleRow}>
+        <Text style={styles.toggleText}>Enable Pricing</Text>
+        <Switch value={priceEnabled} onValueChange={setPriceEnabled} trackColor={{ false: colors.border, true: colors.primary }} />
       </View>
-    );
-  };
+      {priceEnabled && (
+        <View style={styles.priceRow}>
+          <TextInput style={[styles.input, { flex: 1 }]} placeholder="0.00" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
+          <TextInput style={[styles.input, { width: 80 }]} value={currency} onChangeText={setCurrency} autoCapitalize="characters" maxLength={3} />
+        </View>
+      )}
+    </View>
+  );
 
-  const renderStep5 = () => {
-    const stepTitle = 'Details';
-    const stepDescription = 'Tell us about your listing';
-
-    return (
-      <View style={styles.stepContent}>
-        <Text style={styles.stepTitle}>{stepTitle}</Text>
-        <Text style={styles.stepDescription}>{stepDescription}</Text>
-
-        <TextInput
-          style={styles.input}
-          placeholder="Title"
-          placeholderTextColor={colors.textSecondary}
-          value={title}
-          onChangeText={(text) => {
-            setTitle(text);
-            setError('');
-          }}
-          autoCapitalize="words"
-        />
-
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Description"
-          placeholderTextColor={colors.textSecondary}
-          value={description}
-          onChangeText={(text) => {
-            setDescription(text);
-            setError('');
-          }}
-          multiline
-          numberOfLines={6}
-          textAlignVertical="top"
-        />
-      </View>
-    );
-  };
-
-  const renderCurrentStep = () => {
-    switch (currentStep) {
-      case 1:
-        return renderStep2();
-      case 2:
-        return renderStep3();
-      case 3:
-        return renderStep4();
-      case 4:
-        return renderStep5();
-      default:
-        return null;
-    }
-  };
-
-  const nextButtonText = currentStep === totalSteps ? 'Post Listing' : 'Next';
+  const renderStep4 = () => (
+    <View style={styles.stepContent}>
+      <Text style={styles.stepTitle}>Listing Details</Text>
+      <Text style={styles.stepDescription}>Tell us about your offer</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Catchy Title"
+        value={title}
+        onChangeText={setTitle}
+      />
+      <TextInput
+        style={[styles.input, styles.textArea]}
+        placeholder="Detailed Description"
+        value={description}
+        onChangeText={setDescription}
+        multiline
+        numberOfLines={6}
+      />
+    </View>
+  );
 
   return (
-    <>
-      <Stack.Screen options={{ title: 'Create Listing', headerShown: true }} />
-      <SafeAreaView style={styles.container} edges={['bottom']}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
-        >
-          <View style={styles.stepIndicator}>
-            {/* Step 1 */}
-            <View style={styles.stepItem}>
-              <View style={[styles.stepCircle, currentStep === 1 && styles.stepCircleActive, currentStep > 1 && styles.stepCircleCompleted]}>
-                {currentStep > 1 ? <Text style={{ color: colors.background, fontSize: 14, fontWeight: 'bold' }}>✓</Text> : <Text style={[styles.stepNumber, currentStep === 1 && styles.stepNumberActive]}>1</Text>}
-              </View>
-              <View style={[styles.stepLine, currentStep > 1 && styles.stepLineCompleted]} />
-            </View>
-            {/* Step 2 */}
-            <View style={styles.stepItem}>
-              <View style={[styles.stepCircle, currentStep === 2 && styles.stepCircleActive, currentStep > 2 && styles.stepCircleCompleted]}>
-                {currentStep > 2 ? <Text style={{ color: colors.background, fontSize: 14, fontWeight: 'bold' }}>✓</Text> : <Text style={[styles.stepNumber, currentStep === 2 && styles.stepNumberActive]}>2</Text>}
-              </View>
-              <View style={[styles.stepLine, currentStep > 2 && styles.stepLineCompleted]} />
-            </View>
-            {/* Step 3 */}
-            <View style={styles.stepItem}>
-              <View style={[styles.stepCircle, currentStep === 3 && styles.stepCircleActive, currentStep > 3 && styles.stepCircleCompleted]}>
-                {currentStep > 3 ? <Text style={{ color: colors.background, fontSize: 14, fontWeight: 'bold' }}>✓</Text> : <Text style={[styles.stepNumber, currentStep === 3 && styles.stepNumberActive]}>3</Text>}
-              </View>
-              <View style={[styles.stepLine, currentStep > 3 && styles.stepLineCompleted]} />
-            </View>
-            {/* Step 4 */}
-            <View style={styles.stepItem}>
-              <View style={[styles.stepCircle, currentStep === 4 && styles.stepCircleActive, currentStep > 4 && styles.stepCircleCompleted]}>
-                {currentStep > 4 ? <Text style={{ color: colors.background, fontSize: 14, fontWeight: 'bold' }}>✓</Text> : <Text style={[styles.stepNumber, currentStep === 4 && styles.stepNumberActive]}>4</Text>}
-              </View>
-            </View>
+    <SafeAreaView style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <IconSymbol ios_icon_name="chevron.left" android_material_icon_name="arrow-back" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <View style={styles.stepLabels}>
+          <Text style={styles.stepIndicatorText}>Step {currentStep} of {totalSteps}</Text>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${(currentStep / totalSteps) * 100}%` }]} />
           </View>
+        </View>
+      </View>
 
-          <ScrollView
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-          >
-            {renderCurrentStep()}
-          </ScrollView>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+          {currentStep === 1 && renderStep1()}
+          {currentStep === 2 && renderStep2()}
+          {currentStep === 3 && renderStep3()}
+          {currentStep === 4 && renderStep4()}
 
-          {error ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        </ScrollView>
 
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={handleBack}
-              disabled={submitting}
-            >
-              <Text style={{ fontSize: 20 }}>←</Text>
-              <Text style={styles.backButtonText}>Back</Text>
-            </TouchableOpacity>
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.secondaryBtn} onPress={handleBack}>
+            <Text style={styles.secondaryBtnText}>{currentStep === 1 ? 'Cancel' : 'Back'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.primaryBtn} onPress={handleNext} disabled={submitting}>
+            {submitting ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryBtnText}>{currentStep === totalSteps ? 'Post Listing' : 'Continue'}</Text>}
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
 
-            <TouchableOpacity
-              style={[styles.nextButton, submitting && styles.nextButtonDisabled]}
-              onPress={handleNext}
-              disabled={submitting}
-            >
-              {submitting ? (
-                <ActivityIndicator color={colors.background} />
-              ) : (
-                <>
-                  <Text style={styles.nextButtonText}>{nextButtonText}</Text>
-                  <Text style={{ fontSize: 20, color: colors.background }}>→</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
-
-      {/* Category Modal */}
-      <Modal
-        visible={showCategoryModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowCategoryModal(false)}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowCategoryModal(false)}
-        >
-          <Pressable
-            style={styles.modalContent}
-            onStartShouldSetResponder={() => true}
-          >
+      <Modal visible={showCategoryModal} transparent animationType="slide">
+        <Pressable style={styles.modalOverlay} onPress={() => setShowCategoryModal(false)}>
+          <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Category</Text>
-              <TouchableOpacity
-                onPress={() => setShowCategoryModal(false)}
-                style={styles.modalCloseButton}
-              >
-                <IconSymbol
-                  ios_icon_name="xmark.circle.fill"
-                  android_material_icon_name="cancel"
-                  size={28}
-                  color={colors.textSecondary}
-                />
-              </TouchableOpacity>
             </View>
-
-            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-              {loading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={colors.primary} />
-                  <Text style={styles.loadingText}>Loading categories...</Text>
-                </View>
-              ) : (
-                categories.map((cat) => (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[
-                      styles.locationOption,
-                      selectedCategory === cat.id && styles.locationOptionSelected
-                    ]}
-                    onPress={() => {
-                      setSelectedCategory(cat.id);
-                      setShowCategoryModal(false);
-                      setError('');
-                    }}
-                  >
-                    <View style={styles.locationOptionContent}>
-                      <IconSymbol
-                        ios_icon_name="tag.fill"
-                        android_material_icon_name="sell"
-                        size={22}
-                        color={selectedCategory === cat.id ? colors.primary : colors.textSecondary}
-                      />
-                      <Text style={[
-                        styles.locationOptionText,
-                        selectedCategory === cat.id && styles.locationOptionTextSelected
-                      ]}>
-                        {cat.name}
-                      </Text>
-                    </View>
-                    {selectedCategory === cat.id && (
-                      <IconSymbol
-                        ios_icon_name="checkmark.circle.fill"
-                        android_material_icon_name="check-circle"
-                        size={24}
-                        color={colors.primary}
-                      />
-                    )}
-                  </TouchableOpacity>
-                ))
-              )}
+            <ScrollView style={styles.modalScroll}>
+              {categories.map(cat => (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[styles.categoryOption, selectedCategory === cat.id && styles.categoryOptionActive]}
+                  onPress={() => { setSelectedCategory(cat.id); setShowCategoryModal(false); setError(''); }}
+                >
+                  <Text style={[styles.categoryOptionText, selectedCategory === cat.id && styles.categoryOptionTextActive]}>{cat.name}</Text>
+                  {selectedCategory === cat.id && <IconSymbol ios_icon_name="checkmark" android_material_icon_name="check" size={20} color={colors.primary} />}
+                </TouchableOpacity>
+              ))}
             </ScrollView>
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
-    </>
+    </SafeAreaView>
   );
 }
 
@@ -529,8 +264,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  keyboardView: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.backgroundSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  stepLabels: {
     flex: 1,
+  },
+  stepIndicatorText: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    marginBottom: 4,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: colors.border,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: colors.primary,
   },
   scrollView: {
     flex: 1,
@@ -538,119 +303,41 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.lg,
   },
-  stepIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-  },
-  stepItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  stepCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepCircleActive: {
-    backgroundColor: colors.primary,
-  },
-  stepCircleCompleted: {
-    backgroundColor: colors.success,
-  },
-  stepNumber: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  stepNumberActive: {
-    color: colors.background,
-  },
-  stepLine: {
-    width: 24,
-    height: 2,
-    backgroundColor: colors.border,
-    marginHorizontal: 4,
-  },
-  stepLineCompleted: {
-    backgroundColor: colors.success,
-  },
   stepContent: {
     flex: 1,
   },
   stepTitle: {
+    ...typography.h2,
     fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: spacing.sm,
+    marginBottom: 8,
   },
   stepDescription: {
-    fontSize: 16,
-    color: colors.textSecondary,
-    marginBottom: spacing.xl,
+    ...typography.bodySecondary,
+    marginBottom: spacing.xxl,
   },
-  optionsContainer: {
+  selector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
     gap: spacing.md,
   },
-  optionCard: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.xl,
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.border,
-  },
-  optionCardSelected: {
-    borderColor: colors.primary,
-    backgroundColor: `${colors.primary}10`,
-  },
-  optionTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: colors.text,
-    marginTop: spacing.md,
-  },
-  optionTitleSelected: {
-    color: colors.primary,
-  },
-  optionDescription: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
-  },
-  categoriesScroll: {
+  selectorText: {
     flex: 1,
   },
-  categoriesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+  selectorLabel: {
+    ...typography.caption,
+    color: colors.textSecondary,
   },
-  categoryCard: {
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    borderWidth: 2,
-    borderColor: colors.border,
-    minWidth: '47%',
-  },
-  categoryCardSelected: {
-    borderColor: colors.primary,
-    backgroundColor: `${colors.primary}10`,
-  },
-  categoryName: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.text,
-    textAlign: 'center',
+  selectorValue: {
+    ...typography.body,
+    fontWeight: '600',
   },
   input: {
-    backgroundColor: colors.card,
+    backgroundColor: colors.backgroundSecondary,
     borderRadius: borderRadius.md,
     padding: spacing.md,
     fontSize: 16,
@@ -660,192 +347,102 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   textArea: {
-    height: 120,
-    paddingTop: spacing.md,
+    height: 150,
+    textAlignVertical: 'top',
   },
-  toggleContainer: {
+  toggleRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.lg,
   },
-  toggleLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: colors.text,
+  toggleText: {
+    ...typography.body,
+    fontWeight: '600',
   },
-  priceInputContainer: {
+  priceRow: {
     flexDirection: 'row',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
-  priceInput: {
-    flex: 1,
-  },
-  currencyInput: {
-    width: 100,
-  },
-  loader: {
-    marginTop: spacing.xl,
-  },
-  errorContainer: {
-    backgroundColor: colors.error,
-    padding: spacing.md,
-    marginHorizontal: spacing.lg,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.md,
-  },
-  errorText: {
-    color: colors.background,
-    fontSize: 14,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  buttonContainer: {
-    flexDirection: 'row',
+  footer: {
     padding: spacing.lg,
+    flexDirection: 'row',
     gap: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+    backgroundColor: colors.background,
   },
-  backButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.text,
-  },
-  nextButton: {
+  primaryBtn: {
     flex: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
-    padding: spacing.md,
-    gap: spacing.xs,
+    alignItems: 'center',
   },
-  nextButtonDisabled: {
-    opacity: 0.6,
-  },
-  nextButtonText: {
+  primaryBtnText: {
+    color: '#FFF',
+    fontWeight: '700',
     fontSize: 16,
-    fontWeight: '600',
-    color: colors.background,
   },
-  // Added search-style components
-  locationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    minHeight: 72,
-  },
-  locationIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: spacing.md,
-  },
-  locationTextContainer: {
+  secondaryBtn: {
     flex: 1,
+    backgroundColor: colors.backgroundSecondary,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
   },
-  locationLabel: {
-    ...typography.caption,
+  secondaryBtnText: {
     color: colors.textSecondary,
-    marginBottom: 2,
-  },
-  locationValue: {
-    ...typography.body,
-    fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
+    fontSize: 16,
   },
-  selectorHint: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginTop: 2,
+  errorText: {
+    color: colors.error,
+    textAlign: 'center',
+    marginTop: spacing.md,
+    fontWeight: '600',
   },
-  // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modalContent: {
     backgroundColor: colors.card,
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
-    maxHeight: '80%',
+    maxHeight: '70%',
     paddingBottom: spacing.xl,
   },
   modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     padding: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    alignItems: 'center',
   },
   modalTitle: {
-    ...typography.h2,
-    fontSize: 20,
-  },
-  modalCloseButton: {
-    padding: spacing.xs,
+    ...typography.h3,
   },
   modalScroll: {
-    paddingHorizontal: spacing.lg,
+    padding: spacing.lg,
   },
-  locationOption: {
+  categoryOption: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
-    marginVertical: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  locationOptionSelected: {
-    backgroundColor: colors.primary + '10',
+  categoryOptionActive: {
+    backgroundColor: colors.primaryLight + '20',
   },
-  locationOptionContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  locationOptionText: {
+  categoryOptionText: {
     ...typography.body,
-    fontSize: 16,
-    marginLeft: spacing.md,
-    color: colors.text,
+    color: colors.textSecondary,
   },
-  locationOptionTextSelected: {
-    fontWeight: '600',
+  categoryOptionTextActive: {
     color: colors.primary,
-  },
-  loadingContainer: {
-    padding: spacing.xl,
-    alignItems: 'center',
-  },
-  loadingText: {
-    ...typography.bodySecondary,
-    marginTop: spacing.md,
+    fontWeight: '700',
   },
 });

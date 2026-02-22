@@ -1,12 +1,11 @@
-
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
 import { useAuth } from '@/contexts/AuthContext';
-
 import { IconSymbol } from '@/components/IconSymbol';
+import * as Haptics from 'expo-haptics';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -17,195 +16,91 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
 
   const handleLogin = async () => {
-    console.log('User tapped Login button');
-
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (!email || !password) {
       setError('Please fill in all fields');
       return;
     }
-
     setLoading(true);
     setError('');
-
     const { error: signInError } = await signIn(email, password);
-
     if (signInError) {
-      console.error('Login failed:', signInError);
-      setError(signInError.message || 'Login failed. Please try again.');
+      setError(signInError.message || 'Login failed');
       setLoading(false);
     } else {
-      console.log('Login successful, navigating to home');
       router.replace('/(tabs)/(home)');
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    console.log('User tapped Google Sign In');
-    setLoading(true);
-    setError('');
-
-    try {
-      const { error } = await signInWithGoogle();
-
-      if (error) {
-        console.error('Google sign-in failed:', error);
-        setError(error.message || 'Google sign-in failed. Please try again.');
-        setLoading(false);
-      } else {
-        console.log('Google Google sign-in initiated successfully');
-        // The redirects will happen automatically, or we wait for session change
-      }
-    } catch (err: any) {
-      console.error('Google sign-in failed:', err);
-      setError(err.message || 'Google sign-in failed. Please try again.');
-      setLoading(false);
-    }
-  };
-
-  const handleAppleSignIn = async () => {
-    console.log('User tapped Apple Sign In');
-    setLoading(true);
-    setError('');
-
-    try {
-      await authClient.signIn.social({
-        provider: 'apple',
-        callbackURL: '/(tabs)/(home)',
-      });
-      console.log('Apple sign-in initiated');
-    } catch (err: any) {
-      console.error('Apple sign-in failed:', err);
-      setError(err.message || 'Apple sign-in failed. Please try again.');
-      setLoading(false);
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-          <View style={styles.content}>
-            <TouchableOpacity
-              onPress={() => router.replace('/(tabs)/(home)')}
-              style={styles.backHomeButton}
-              disabled={loading}
-            >
-              <IconSymbol
-                ios_icon_name="house.fill"
-                android_material_icon_name="home"
-                size={24}
-                color={colors.textSecondary}
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <TouchableOpacity onPress={() => router.replace('/(tabs)/(home)')} style={styles.backBtn}>
+            <IconSymbol ios_icon_name="chevron.left" android_material_icon_name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+
+          <View style={styles.header}>
+            <View style={styles.logoCont}>
+              <IconSymbol ios_icon_name="lock.shield.fill" android_material_icon_name="security" size={40} color={colors.primary} />
+            </View>
+            <Text style={styles.title}>Welcome Back</Text>
+            <Text style={styles.subtitle}>Sign in to your account</Text>
+          </View>
+
+          <View style={styles.form}>
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+            <View style={styles.inputCont}>
+              <Text style={styles.label}>Email Address</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="name@example.com"
+                placeholderTextColor={colors.textTertiary}
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
               />
-              <Text style={styles.backHomeText}>Back Home</Text>
+            </View>
+
+            <View style={styles.inputCont}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Minimum 6 characters"
+                placeholderTextColor={colors.textTertiary}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            </View>
+
+            <TouchableOpacity style={styles.primaryBtn} onPress={handleLogin} disabled={loading}>
+              {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.primaryBtnText}>Sign In</Text>}
             </TouchableOpacity>
 
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to continue</Text>
-
-            {error ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
-
-            <View style={styles.socialButtons}>
-              <TouchableOpacity
-                style={[styles.socialButton, styles.googleButton]}
-                onPress={handleGoogleSignIn}
-                disabled={loading}
-              >
-                <IconSymbol
-                  ios_icon_name="g.circle.fill"
-                  android_material_icon_name="login"
-                  size={20}
-                  color="#FFFFFF"
-                />
-                <Text style={styles.socialButtonText}>Continue with Google</Text>
-              </TouchableOpacity>
-
-              {Platform.OS === 'ios' && (
-                <TouchableOpacity
-                  style={[styles.socialButton, styles.appleButton]}
-                  onPress={handleAppleSignIn}
-                  disabled={loading}
-                >
-                  <IconSymbol
-                    ios_icon_name="apple.logo"
-                    android_material_icon_name="login"
-                    size={20}
-                    color="#FFFFFF"
-                  />
-                  <Text style={styles.socialButtonText}>Continue with Apple</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
             <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
+              <View style={styles.line} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.line} />
             </View>
 
-            <View style={styles.form}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="your@email.com"
-                  placeholderTextColor={colors.textSecondary}
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  editable={!loading}
-                />
-              </View>
+            <TouchableOpacity style={styles.socialBtn} onPress={() => signInWithGoogle()}>
+              <IconSymbol ios_icon_name="globe" android_material_icon_name="public" size={20} color={colors.text} />
+              <Text style={styles.socialBtnText}>Continue with Google</Text>
+            </TouchableOpacity>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter your password"
-                  placeholderTextColor={colors.textSecondary}
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry
-                  editable={!loading}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
-                onPress={handleLogin}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.buttonText}>Sign In</Text>
-                )}
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>New here?</Text>
+              <TouchableOpacity onPress={() => router.push('/auth/register')}>
+                <Text style={styles.linkText}>Create Account</Text>
               </TouchableOpacity>
-
-              <View style={styles.footer}>
-                <Text style={styles.footerText}>Don&apos;t have an account?</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    console.log('User tapped Register link');
-                    router.push('/auth/register');
-                  }}
-                  disabled={loading}
-                >
-                  <Text style={styles.link}>Register</Text>
-                </TouchableOpacity>
-              </View>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView >
+    </SafeAreaView>
   );
 }
 
@@ -214,130 +109,121 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
-  keyboardView: {
-    flex: 1,
-  },
   scrollContent: {
     flexGrow: 1,
-  },
-  content: {
-    flex: 1,
     padding: spacing.lg,
+  },
+  backBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.backgroundSecondary,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.xl,
+  },
+  header: {
+    alignItems: 'center',
+    marginBottom: spacing.xxl,
+  },
+  logoCont: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   title: {
     ...typography.h1,
-    marginBottom: spacing.xs,
+    fontSize: 32,
+    marginBottom: 8,
   },
   subtitle: {
     ...typography.bodySecondary,
-    marginBottom: spacing.xl,
+    fontSize: 16,
   },
-  errorContainer: {
-    backgroundColor: colors.error + '20',
-    padding: spacing.md,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.md,
+  form: {
+    gap: spacing.lg,
   },
   errorText: {
     color: colors.error,
-    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
   },
-  socialButtons: {
-    gap: spacing.md,
-    marginBottom: spacing.lg,
+  inputCont: {
+    gap: 8,
   },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  label: {
+    ...typography.caption,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    marginLeft: 4,
+  },
+  input: {
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    fontSize: 16,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  primaryBtn: {
+    backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
-    gap: spacing.sm,
+    alignItems: 'center',
+    marginTop: spacing.sm,
   },
-  googleButton: {
-    backgroundColor: '#4285F4',
-  },
-  appleButton: {
-    backgroundColor: '#000000',
-  },
-  socialButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  primaryBtnText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 18,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: spacing.lg,
+    gap: spacing.md,
+    marginVertical: spacing.sm,
   },
-  dividerLine: {
+  line: {
     flex: 1,
     height: 1,
     backgroundColor: colors.border,
   },
   dividerText: {
-    ...typography.bodySecondary,
-    marginHorizontal: spacing.md,
+    ...typography.caption,
+    color: colors.textTertiary,
+    fontWeight: '700',
   },
-  form: {
-    gap: spacing.lg,
-  },
-  inputGroup: {
-    gap: spacing.sm,
-  },
-  label: {
-    ...typography.body,
-    fontWeight: '600',
-  },
-  input: {
-    backgroundColor: colors.card,
+  socialBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: borderRadius.sm,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    fontSize: 16,
-    color: colors.text,
-  },
-  button: {
-    backgroundColor: colors.primary,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
-    alignItems: 'center',
-    marginTop: spacing.md,
+    gap: spacing.md,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  socialBtnText: {
     fontWeight: '600',
+    fontSize: 16,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.xs,
+    gap: 6,
+    marginTop: spacing.md,
   },
   footerText: {
     ...typography.bodySecondary,
   },
-  link: {
-    ...typography.body,
+  linkText: {
     color: colors.primary,
-    fontWeight: '600',
-  },
-  backHomeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xl,
-    alignSelf: 'flex-start',
-    gap: spacing.xs,
-  },
-  backHomeText: {
-    ...typography.bodySecondary,
-    fontWeight: '600',
+    fontWeight: '700',
   },
 });

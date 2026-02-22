@@ -1,0 +1,150 @@
+{
+  "version": 1,
+  "skills": {
+    "academic-researcher": {
+      "source": "Shubhamsaboo/awesome-llm-apps",
+      "sourceType": "github",
+      "computedHash": "73a461c6ca9d0d5d9fb66da78915f2500a92ed59874873f03beed4cfb7bdd281"
+    },
+    "add-setting-env": {
+      "source": "lobehub/lobehub",
+      "sourceType": "github",
+      "computedHash": "8eccc907d0894be6be051def0162553a4ed1cfada328ca5b83c316fe51506a6d"
+    },
+    "brand-guidelines": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "cf41642f38f35bcae5bbf59215f0ee629d5f6a54b4811454f6cb93bc9b12b69e"
+    },
+    "canvas-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "21e7c68d336893e4f2aa8d269854fd5e253c89cfc6dd0e74fa487fe7e96abdeb"
+    },
+    "code-reviewer": {
+      "source": "Shubhamsaboo/awesome-llm-apps",
+      "sourceType": "github",
+      "computedHash": "20cc3ad7431ddaa86a8560b65afde7ba016d14c37ddafa4eeb441e7fec77be1b"
+    },
+    "content-creator": {
+      "source": "Shubhamsaboo/awesome-llm-apps",
+      "sourceType": "github",
+      "computedHash": "4c8c5eb0a945c3c50d845145fbe3d4347b599eb531cbeb154099276a4bb4a6b6"
+    },
+    "data-analyst": {
+      "source": "Shubhamsaboo/awesome-llm-apps",
+      "sourceType": "github",
+      "computedHash": "b927391093b9e04f091c9c04da47096e2217deb7acaccbfbc9690261626085b6"
+    },
+    "data-fetching": {
+      "source": "lobehub/lobehub",
+      "sourceType": "github",
+      "computedHash": "52a46e9baedf44267f1323d02f4533fdd99839dd1b10951610643ae8996ba566"
+    },
+    "debug": {
+      "source": "lobehub/lobehub",
+      "sourceType": "github",
+      "computedHash": "1cfb33a00081de8417b741b680d4fe530c5e259f8610b6c610fc3f366bde0234"
+    },
+    "discovery-interview": {
+      "source": "parcadei/Continuous-Claude-v3",
+      "sourceType": "github",
+      "computedHash": "934f3f1a7dd3a35e3a74f5716242ca2642a0efc6bee4f0c5f8b2233d7aefa9f3"
+    },
+    "editor": {
+      "source": "Shubhamsaboo/awesome-llm-apps",
+      "sourceType": "github",
+      "computedHash": "fcb8aa2aacaded8a0f873fde081a7103d5dbbecadbc715faef407019ec9c6c0d"
+    },
+    "fact-checker": {
+      "source": "Shubhamsaboo/awesome-llm-apps",
+      "sourceType": "github",
+      "computedHash": "b8b003553b0c268b4c21cfc149e6ff53f8beb1aa1ac8e2642a74104426d8cb3a"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "516bd2154eb843a8240e43d5b285229129853114ad7075a5e141e1c08e408c84"
+    },
+    "fullstack-developer": {
+      "source": "Shubhamsaboo/awesome-llm-apps",
+      "sourceType": "github",
+      "computedHash": "92f6f4f9bbdde529237f1840d94c4269abb62ad1d5e41d9c76bd14266001cbe8"
+    },
+    "mcp-builder": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "f08cbdec74dba480ec5217363446dae154b7576b8c3d9b4cb17aff234f15973b"
+    },
+    "pdf": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "37226d4220d844377e6b2a386c51a011df4cd130855ff0b80bcc22f9c28abd57"
+    },
+    "pptx": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "2275e4d8dba1790d52f6619b3e2fed04edc948beef545a2ad18e4a1be644426d"
+    },
+    "project-overview": {
+      "source": "lobehub/lobehub",
+      "sourceType": "github",
+      "computedHash": "f7c3b6facfc2c7543b5583c0c9ffb24f1399bbc92355d4c763c200f9e07b4998"
+    },
+    "project-planner": {
+      "source": "Shubhamsaboo/awesome-llm-apps",
+      "sourceType": "github",
+      "computedHash": "24c15eb0dd79411a7d78250dbf1dc96ecadbab7b2a23ee5e52bff65ed62b0487"
+    },
+    "python-expert": {
+      "source": "Shubhamsaboo/awesome-llm-apps",
+      "sourceType": "github",
+      "computedHash": "aaefc22f80eb2b50bc24cf2be6121d0ec3b63a8f025a4f7c583c049d2ebab60b"
+    },
+    "react": {
+      "source": "lobehub/lobehub",
+      "sourceType": "github",
+      "computedHash": "ec98a32434475c4bd1826b8aa9c62efda8c38030bb9f1450cfd2d736f3af99e6"
+    },
+    "skill-creator": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "1a2f4694384cb90d19d75354975dfb654d5c4ad230041667cb4b5b898474d7df"
+    },
+    "sprint-planner": {
+      "source": "Shubhamsaboo/awesome-llm-apps",
+      "sourceType": "github",
+      "computedHash": "2878e83b6f3e0e5f686c38a53bfa5abfe022c4b61976fb10c2aedc789e74f5b7"
+    },
+    "template-skill": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "daf176f2cd0030d321982d3e813fd1a794a0b4744c5a92d2931a37001bb40fb9"
+    },
+    "testing": {
+      "source": "lobehub/lobehub",
+      "sourceType": "github",
+      "computedHash": "fd02540d15c87cb7964700bbd5d8065fb6ebca1473181b45cf2b2d172abc84fe"
+    },
+    "typescript": {
+      "source": "lobehub/lobehub",
+      "sourceType": "github",
+      "computedHash": "7f33161bce3aeebc7ab66d385865b79cacfe63d2bdbbb8059c4f17ec653c078c"
+    },
+    "version-release": {
+      "source": "lobehub/lobehub",
+      "sourceType": "github",
+      "computedHash": "db1b635822bd0c3d9a4a96d481ccf8e3852d9b5419e39c5f994ab9653b09491b"
+    },
+    "visualization-expert": {
+      "source": "Shubhamsaboo/awesome-llm-apps",
+      "sourceType": "github",
+      "computedHash": "9b44f1746fe56c2c74011dc3b0a038d20ac2101382c3f3164d0d5047a36da174"
+    },
+    "webapp-testing": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "computedHash": "5a6a18c0137cfbabec058e86fc1c8f6919d846a7b2a34ee978cc8ced866ee2e5"
+    }
+  }
+}

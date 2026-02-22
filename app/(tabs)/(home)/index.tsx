@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -9,6 +8,56 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Category, Service } from '@/types/database';
 import { getCategoryIcons, normalizeMaterialIconName } from '@/utils/categoryIcons';
 import { useAuth } from '@/contexts/AuthContext';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+
+function CategoryCard({ category, onPress }: { category: Category; onPress: () => void }) {
+  const scale = useSharedValue(1);
+  const icons = getCategoryIcons(category.name);
+  const materialIconName = normalizeMaterialIconName(icons.icon_material);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.92);
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1);
+  };
+
+  const handlePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={1}
+    >
+      <Animated.View style={[styles.categoryCard, animatedStyle]}>
+        <View style={[styles.categoryIcon, { backgroundColor: colors.primaryLight }]}>
+          <IconSymbol
+            android_material_icon_name={materialIconName as any}
+            ios_icon_name={icons.icon_sf}
+            size={28}
+            color={colors.primary}
+          />
+        </View>
+        <Text style={styles.categoryName} numberOfLines={2}>{category.name}</Text>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -19,13 +68,11 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('HomeScreen: Loading data');
     loadData();
   }, []);
 
   const loadData = async () => {
     if (!isSupabaseConfigured) {
-      console.log('Supabase not configured');
       setLoading(false);
       return;
     }
@@ -36,7 +83,7 @@ export default function HomeScreen() {
           .from('categories')
           .select('*')
           .order('display_order', { ascending: true })
-          .limit(8),
+          .limit(10),
         supabase
           .from('services')
           .select('*, specialist:profiles!specialist_profile_id(*), category:categories(*)')
@@ -48,7 +95,6 @@ export default function HomeScreen() {
       if (categoriesResult.error) throw categoriesResult.error;
       if (servicesResult.error) throw servicesResult.error;
 
-      console.log('Data loaded successfully');
       setCategories(categoriesResult.data || []);
       setFeaturedServices(servicesResult.data || []);
     } catch (error: any) {
@@ -59,22 +105,19 @@ export default function HomeScreen() {
   };
 
   const handleSearch = () => {
-    console.log('User tapped search');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push('/search');
   };
 
   const handleCategoryPress = (categoryId: string) => {
-    console.log('User tapped category:', categoryId);
     router.push(`/(tabs)/services?category=${categoryId}`);
   };
 
   const handleServicePress = (serviceId: string) => {
-    console.log('User tapped service:', serviceId);
     router.push(`/service/${serviceId}`);
   };
 
   const handleAddListing = () => {
-    console.log('User tapped Add Listing button');
     router.push('/create-listing');
   };
 
@@ -86,11 +129,11 @@ export default function HomeScreen() {
             android_material_icon_name="cloud-off"
             ios_icon_name="cloud.slash"
             size={64}
-            color={colors.textSecondary}
+            color={colors.textTertiary}
           />
-          <Text style={styles.setupTitle}>Supabase Not Configured</Text>
+          <Text style={styles.setupTitle}>Connection Required</Text>
           <Text style={styles.setupDescription}>
-            Please configure your Supabase credentials in app.json to use this app.
+            Please check your internet connection or Supabase settings.
           </Text>
         </View>
       </SafeAreaView>
@@ -110,51 +153,37 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Welcome</Text>
-            <Text style={styles.title}>Find Your Specialist</Text>
-          </View>
-          <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
+        <View style={styles.banner}>
+          <Text style={styles.greeting}>Profi.uy</Text>
+          <Text style={styles.title}>All specialists{"\n"}in one place</Text>
+
+          <TouchableOpacity style={styles.searchBar} onPress={handleSearch} activeOpacity={0.9}>
             <IconSymbol
               android_material_icon_name="search"
               ios_icon_name="magnifyingglass"
-              size={24}
-              color={colors.text}
+              size={20}
+              color={colors.textSecondary}
             />
+            <Text style={styles.searchText}>What service do you need?</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Categories</Text>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Popular Categories</Text>
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.categoriesContainer}
           >
-            {categories.map((category) => {
-              const icons = getCategoryIcons(category.name);
-              const materialIconName = normalizeMaterialIconName(icons.icon_material);
-              const categoryColor = category.color || colors.primary;
-
-              return (
-                <TouchableOpacity
-                  key={category.id}
-                  style={[styles.categoryCard, { borderColor: categoryColor }]}
-                  onPress={() => handleCategoryPress(category.id)}
-                >
-                  <View style={[styles.categoryIcon, { backgroundColor: categoryColor }]}>
-                    <IconSymbol
-                      android_material_icon_name={materialIconName as any}
-                      ios_icon_name={icons.icon_sf}
-                      size={28}
-                      color="#FFFFFF"
-                    />
-                  </View>
-                  <Text style={styles.categoryName} numberOfLines={2}>{category.name}</Text>
-                </TouchableOpacity>
-              );
-            })}
+            {categories.map((category) => (
+              <CategoryCard
+                key={category.id}
+                category={category}
+                onPress={() => handleCategoryPress(category.id)}
+              />
+            ))}
           </ScrollView>
         </View>
 
@@ -172,7 +201,7 @@ export default function HomeScreen() {
                 android_material_icon_name="work-outline"
                 ios_icon_name="briefcase"
                 size={48}
-                color={colors.textSecondary}
+                color={colors.textTertiary}
               />
               <Text style={styles.emptyText}>No services available yet</Text>
             </View>
@@ -205,12 +234,11 @@ export default function HomeScreen() {
                       {service.description}
                     </Text>
 
-                    {/* Specialist Summary Row (Matching Services Tab) */}
                     <View style={styles.specialistSummary}>
                       <IconSymbol
                         ios_icon_name="person.circle.fill"
                         android_material_icon_name="account-circle"
-                        size={32}
+                        size={24}
                         color={colors.primary}
                       />
                       <View style={styles.specialistInfo}>
@@ -219,7 +247,7 @@ export default function HomeScreen() {
                           <IconSymbol
                             ios_icon_name="star.fill"
                             android_material_icon_name="star"
-                            size={14}
+                            size={12}
                             color={colors.warning}
                           />
                           <Text style={styles.ratingText}>{ratingText}</Text>
@@ -232,8 +260,8 @@ export default function HomeScreen() {
                         <IconSymbol
                           ios_icon_name="tag.fill"
                           android_material_icon_name="label"
-                          size={16}
-                          color={colors.textSecondary}
+                          size={14}
+                          color={colors.textTertiary}
                         />
                         <Text style={styles.serviceInfoText}>{categoryName}</Text>
                       </View>
@@ -245,10 +273,9 @@ export default function HomeScreen() {
           )}
         </View>
 
-        <View style={{ height: 100 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* Floating Action Button - Modern "List Service" Pill */}
       <TouchableOpacity style={styles.fabExtended} onPress={handleAddListing}>
         <IconSymbol
           android_material_icon_name="add"
@@ -270,6 +297,43 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  banner: {
+    paddingTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    backgroundColor: colors.background,
+  },
+  greeting: {
+    ...typography.body,
+    color: colors.primary,
+    fontWeight: '700',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    fontSize: 14,
+    marginBottom: spacing.xs,
+  },
+  title: {
+    ...typography.h1,
+    fontSize: 32,
+    lineHeight: 38,
+    marginBottom: spacing.lg,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundSecondary,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.sm,
+  },
+  searchText: {
+    ...typography.body,
+    color: colors.textSecondary,
+    fontSize: 15,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -282,41 +346,14 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
   },
   setupTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.text,
+    ...typography.h2,
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
   },
   setupDescription: {
-    fontSize: 16,
-    color: colors.textSecondary,
+    ...typography.bodySecondary,
     textAlign: 'center',
-    lineHeight: 24,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.lg,
-  },
-  greeting: {
-    fontSize: 16,
-    color: colors.textSecondary,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginTop: 4,
-  },
-  searchButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.card,
-    justifyContent: 'center',
-    alignItems: 'center',
+    lineHeight: 22,
   },
   section: {
     marginBottom: spacing.xl,
@@ -329,14 +366,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.text,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    ...typography.h3,
+    fontSize: 18,
   },
   seeAllText: {
-    fontSize: 14,
+    ...typography.bodySecondary,
     color: colors.primary,
     fontWeight: '600',
   },
@@ -347,11 +381,10 @@ const styles = StyleSheet.create({
   categoryCard: {
     alignItems: 'center',
     width: 100,
-    marginRight: spacing.md,
     backgroundColor: colors.card,
     padding: spacing.md,
     borderRadius: borderRadius.lg,
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: colors.border,
   },
   categoryIcon: {
@@ -367,6 +400,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
     color: colors.text,
+    fontSize: 11,
   },
   servicesGrid: {
     paddingHorizontal: spacing.lg,
@@ -378,6 +412,11 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: colors.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   serviceHeader: {
     flexDirection: 'row',
@@ -386,39 +425,37 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   serviceTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: colors.text,
+    ...typography.h3,
+    fontSize: 17,
     flex: 1,
     marginRight: spacing.sm,
   },
   servicePrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    ...typography.body,
+    fontWeight: '700',
     color: colors.primary,
   },
   serviceDescription: {
-    fontSize: 14,
-    color: colors.textSecondary,
+    ...typography.bodySecondary,
+    marginBottom: spacing.md,
     lineHeight: 20,
+  },
+  specialistSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    padding: spacing.sm,
+    backgroundColor: colors.backgroundSecondary,
+    borderRadius: borderRadius.md,
     marginBottom: spacing.md,
   },
-  serviceFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
   specialistInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
     flex: 1,
-    marginRight: spacing.sm,
   },
   specialistName: {
+    ...typography.body,
     fontSize: 14,
-    color: colors.text,
-    fontWeight: '500',
-    flex: 1,
+    fontWeight: '600',
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -426,58 +463,53 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   ratingText: {
-    fontSize: 14,
+    ...typography.caption,
     fontWeight: '600',
     color: colors.text,
   },
+  serviceFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  serviceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  serviceInfoText: {
+    ...typography.caption,
+    color: colors.textSecondary,
+  },
   emptyState: {
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
+    padding: spacing.xxl,
   },
   emptyText: {
-    fontSize: 16,
-    color: colors.textSecondary,
+    ...typography.bodySecondary,
     marginTop: spacing.md,
   },
   fabExtended: {
     position: 'absolute',
     right: spacing.lg,
-    bottom: 100,
+    bottom: 110,
     backgroundColor: colors.primary,
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
     borderRadius: borderRadius.full,
-    shadowColor: colors.primary,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 5,
     gap: spacing.sm,
+    zIndex: 100,
   },
   fabText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
-  },
-  specialistSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.sm,
-  },
-  serviceInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  serviceInfoText: {
-    ...typography.caption,
   },
 });

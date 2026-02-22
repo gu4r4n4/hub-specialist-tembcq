@@ -1,6 +1,5 @@
-
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, TextInput, FlatList } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, FlatList } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
@@ -8,6 +7,7 @@ import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { Service, Category } from '@/types/database';
 import { IconSymbol } from '@/components/IconSymbol';
 import { getCategoryIcons, normalizeMaterialIconName } from '@/utils/categoryIcons';
+import * as Haptics from 'expo-haptics';
 
 export default function ServicesScreen() {
   const router = useRouter();
@@ -30,7 +30,6 @@ export default function ServicesScreen() {
   }, [params.category]);
 
   useEffect(() => {
-    console.log('ServicesScreen: Loading services', { selectedCategory, location: params.location });
     loadData();
   }, [selectedCategory, params.location, params.search]);
 
@@ -41,6 +40,7 @@ export default function ServicesScreen() {
     }
 
     try {
+      setLoading(true);
       const categoriesResult = await supabase.from('categories').select('*').order('display_order', { ascending: true, nullsFirst: false });
 
       let servicesQuery = supabase
@@ -67,7 +67,6 @@ export default function ServicesScreen() {
       }
 
       if (servicesResult.data) {
-        console.log('Services loaded:', servicesResult.data.length);
         setServices(servicesResult.data);
       }
     } catch (error) {
@@ -78,20 +77,24 @@ export default function ServicesScreen() {
   };
 
   const handleSearch = () => {
-    console.log('User tapped search');
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push('/search');
   };
 
   const handleServicePress = (serviceId: string) => {
-    console.log('User tapped service:', serviceId);
     router.push(`/service/${serviceId}`);
+  };
+
+  const toggleCategory = (id: string | null) => {
+    Haptics.selectionAsync();
+    setSelectedCategory(id === 'all' ? null : id);
   };
 
   if (!isSupabaseConfigured) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Supabase not configured</Text>
+          <Text style={styles.errorText}>Configuration Required</Text>
         </View>
       </SafeAreaView>
     );
@@ -100,72 +103,45 @@ export default function ServicesScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Services</Text>
+        <View>
+          <Text style={styles.title}>Services</Text>
+          {params.location && (
+            <Text style={styles.subtitle}>in {params.location}</Text>
+          )}
+        </View>
         <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
           <IconSymbol
             android_material_icon_name="search"
             ios_icon_name="magnifyingglass"
-            size={24}
+            size={22}
             color={colors.text}
           />
         </TouchableOpacity>
       </View>
 
-      {/* Categories row: use a fixed-height wrapper + horizontal FlatList.
-          This prevents a tall invisible touch area that blocks vertical scrolling on iOS. */}
-      <View style={styles.categoriesWrapper} pointerEvents="box-none">
+      <View style={styles.categoriesWrapper}>
         <FlatList
           horizontal
           showsHorizontalScrollIndicator={false}
           data={categoriesData}
           keyExtractor={(item: any) => item.id}
-          style={styles.categoriesList}
           contentContainerStyle={styles.categoriesListContent}
           renderItem={({ item }: any) => {
             const isAll = item.id === 'all';
             const isActive = isAll ? !selectedCategory : selectedCategory === item.id;
-            const categoryColor = (item.color || colors.primary) as string;
-
-            const iconMapping = isAll ? null : getCategoryIcons(item.name);
-            const iconMaterialRaw = isAll
-              ? 'apps'
-              : (iconMapping?.icon_material || item.icon_material || 'category');
-            const iconMaterial = normalizeMaterialIconName(iconMaterialRaw);
-            const iconSf = isAll
-              ? 'square.grid.2x2'
-              : (iconMapping?.icon_sf || item.icon_sf || 'square.grid.2x2');
 
             return (
               <TouchableOpacity
                 style={[
-                  styles.categoryCard,
-                  isActive && styles.categoryCardActive,
-                  isActive && { borderColor: categoryColor },
+                  styles.categoryPill,
+                  isActive && styles.categoryPillActive,
                 ]}
-                onPress={() => {
-                  if (isAll) {
-                    console.log('User selected All categories');
-                    setSelectedCategory(null);
-                  } else {
-                    console.log('User selected category:', item.name);
-                    setSelectedCategory(item.id);
-                  }
-                }}
+                onPress={() => toggleCategory(item.id)}
               >
-                <View
-                  style={[
-                    styles.categoryIconContainer,
-                    { backgroundColor: isAll && isActive ? colors.primary : categoryColor },
-                  ]}
-                >
-                  <IconSymbol
-                    ios_icon_name={iconSf}
-                    android_material_icon_name={iconMaterial as any}
-                    size={26}
-                    color="#FFFFFF"
-                  />
-                </View>
-                <Text style={styles.categoryName} numberOfLines={2}>
+                <Text style={[
+                  styles.categoryPillText,
+                  isActive && styles.categoryPillTextActive
+                ]}>
                   {item.name}
                 </Text>
               </TouchableOpacity>
@@ -182,75 +158,55 @@ export default function ServicesScreen() {
         <ScrollView
           style={styles.scrollView}
           showsVerticalScrollIndicator={false}
-          contentInsetAdjustmentBehavior="never"
           contentContainerStyle={styles.servicesContent}
         >
           {services.length === 0 ? (
-            <Text style={styles.emptyText}>No services found</Text>
+            <View style={styles.emptyState}>
+              <IconSymbol ios_icon_name="magnifyingglass" android_material_icon_name="search_off" size={48} color={colors.textTertiary} />
+              <Text style={styles.emptyText}>No services found matching your criteria</Text>
+            </View>
           ) : (
-            <React.Fragment>
-              {services.map((service, index) => {
-                const specialistName = service.specialist?.full_name || 'Unknown';
-                const specialistCity = service.specialist?.city || '';
-                const categoryName = service.category?.name || 'Uncategorized';
-                const priceText = `${service.currency} ${service.price.toFixed(2)}`;
-                const ratingText = service.rating_count > 0 ? `${service.rating_avg.toFixed(1)} (${service.rating_count})` : 'No ratings';
+            services.map((service) => {
+              const specialistName = service.specialist?.full_name || 'Unknown';
+              const ratingAvg = service.rating_avg || 0;
+              const ratingCount = service.rating_count || 0;
+              const priceText = `${service.currency} ${service.price.toFixed(2)}`;
+              const ratingText = ratingCount > 0 ? `${ratingAvg.toFixed(1)} (${ratingCount})` : 'No ratings';
 
-                return (
-                  <TouchableOpacity
-                    key={index}
-                    style={styles.serviceCard}
-                    onPress={() => handleServicePress(service.id)}
-                  >
-                    <View style={styles.serviceHeader}>
-                      <Text style={styles.serviceTitle}>{service.title}</Text>
-                      {service.price > 0 && (
-                        <Text style={styles.servicePrice}>{priceText}</Text>
-                      )}
+              return (
+                <TouchableOpacity
+                  key={service.id}
+                  style={styles.serviceCard}
+                  onPress={() => handleServicePress(service.id)}
+                >
+                  <View style={styles.serviceHeader}>
+                    <Text style={styles.serviceTitle} numberOfLines={1}>{service.title}</Text>
+                    <Text style={styles.servicePrice}>{priceText}</Text>
+                  </View>
+
+                  <Text style={styles.serviceDescription} numberOfLines={2}>
+                    {service.description}
+                  </Text>
+
+                  <View style={styles.specialistRow}>
+                    <View style={styles.specialistAvatar}>
+                      <IconSymbol ios_icon_name="person.fill" android_material_icon_name="person" size={20} color={colors.primary} />
                     </View>
-                    <Text style={styles.serviceDescription} numberOfLines={2}>
-                      {service.description}
-                    </Text>
-
-                    {/* Specialist Summary Row */}
-                    <View style={styles.specialistSummary}>
-                      <IconSymbol
-                        ios_icon_name="person.circle.fill"
-                        android_material_icon_name="account-circle"
-                        size={32}
-                        color={colors.primary}
-                      />
-                      <View style={styles.specialistInfo}>
-                        <Text style={styles.specialistName}>{specialistName}</Text>
-                        <View style={styles.specialistRating}>
-                          <IconSymbol
-                            ios_icon_name="star.fill"
-                            android_material_icon_name="star"
-                            size={14}
-                            color={colors.warning}
-                          />
-                          <Text style={styles.specialistRatingText}>{ratingText}</Text>
-                        </View>
+                    <View style={styles.specialistInfo}>
+                      <Text style={styles.specialistName}>{specialistName}</Text>
+                      <View style={styles.ratingRow}>
+                        <IconSymbol ios_icon_name="star.fill" android_material_icon_name="star" size={14} color={colors.warning} />
+                        <Text style={styles.ratingText}>{ratingText}</Text>
                       </View>
                     </View>
-
-                    <View style={styles.serviceFooter}>
-                      <View style={styles.serviceInfo}>
-                        <IconSymbol
-                          ios_icon_name="tag.fill"
-                          android_material_icon_name="label"
-                          size={16}
-                          color={colors.textSecondary}
-                        />
-                        <Text style={styles.serviceInfoText}>{categoryName}</Text>
-                      </View>
+                    <View style={styles.categoryBadge}>
+                      <Text style={styles.categoryBadgeText}>{service.category?.name}</Text>
                     </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </React.Fragment>
+                  </View>
+                </TouchableOpacity>
+              );
+            })
           )}
-          {/* Spacer handled by styles.servicesContent paddingBottom */}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -260,168 +216,167 @@ export default function ServicesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.backgroundSecondary,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
-    paddingTop: 48,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.md,
+    backgroundColor: colors.background,
   },
   title: {
-    ...typography.h1,
-    color: colors.text,
+    ...typography.h2,
+    fontSize: 28,
+  },
+  subtitle: {
+    ...typography.caption,
+    color: colors.primary,
+    fontWeight: '700',
+    marginTop: -4,
   },
   searchButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: colors.card,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.backgroundSecondary,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  categoriesWrapper: {
+    backgroundColor: colors.background,
+    paddingBottom: spacing.md,
+  },
+  categoriesListContent: {
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
+  },
+  categoryPill: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.backgroundSecondary,
     borderWidth: 1,
     borderColor: colors.border,
   },
-  // Fixed-height wrapper prevents the horizontal categories row from creating
-  // a tall invisible touch area that blocks vertical scrolling.
-  categoriesWrapper: {
-    height: 112,
-    marginBottom: spacing.sm,
+  categoryPillActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
   },
-  categoriesList: {
-    height: 112,
-  },
-  categoriesListContent: {
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.lg,
-    alignItems: 'flex-start',
-  },
-  // Match Home tab category card styling exactly
-  categoryCard: {
-    backgroundColor: colors.card,
-    // Slightly tighter than Home to fit inside a smaller fixed-height categories row
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.lg,
-    marginRight: spacing.md,
-    borderWidth: 2,
-    borderColor: colors.border,
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    width: 120,
-  },
-  categoryCardActive: {
-    borderWidth: 2,
-  },
-  categoryIconContainer: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  categoryName: {
-    ...typography.caption,
+  categoryPillText: {
+    ...typography.bodySecondary,
     fontWeight: '600',
-    textAlign: 'center',
+    color: colors.textSecondary,
+  },
+  categoryPillTextActive: {
+    color: '#FFFFFF',
   },
   scrollView: {
     flex: 1,
   },
-  // Avoid a large blank area at the top of the list on iOS (auto content inset)
-  // and keep enough bottom space for the floating tab bar.
   servicesContent: {
-    paddingTop: 0,
+    padding: spacing.lg,
     paddingBottom: 120,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  emptyText: {
-    ...typography.bodySecondary,
-    textAlign: 'center',
-    paddingVertical: spacing.xl,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  errorText: {
-    ...typography.bodySecondary,
   },
   serviceCard: {
     backgroundColor: colors.card,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    borderRadius: borderRadius.lg,
     padding: spacing.md,
-    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   serviceHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.sm,
+    alignItems: 'center',
+    marginBottom: spacing.xs,
   },
   serviceTitle: {
     ...typography.h3,
+    fontSize: 18,
     flex: 1,
     marginRight: spacing.sm,
   },
   servicePrice: {
     ...typography.body,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.primary,
   },
   serviceDescription: {
     ...typography.bodySecondary,
     marginBottom: spacing.md,
+    lineHeight: 20,
   },
-  specialistSummary: {
+  specialistRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.sm,
+  },
+  specialistAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   specialistInfo: {
     flex: 1,
   },
   specialistName: {
     ...typography.body,
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: spacing.xs,
   },
-  specialistRating: {
+  ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
+    gap: 4,
   },
-  specialistRatingText: {
+  ratingText: {
     ...typography.caption,
+    fontWeight: '600',
+  },
+  categoryBadge: {
+    backgroundColor: colors.backgroundSecondary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    borderRadius: borderRadius.sm,
+  },
+  categoryBadgeText: {
+    ...typography.caption,
+    fontSize: 10,
+    fontWeight: '700',
     color: colors.textSecondary,
   },
-  serviceFooter: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  serviceInfo: {
-    flexDirection: 'row',
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.xs,
   },
-  serviceInfoText: {
-    ...typography.caption,
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+  },
+  emptyText: {
+    ...typography.bodySecondary,
+    marginTop: spacing.md,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    ...typography.bodySecondary,
   },
 });
