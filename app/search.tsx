@@ -14,6 +14,7 @@ import Animated, {
 import * as Haptics from 'expo-haptics';
 
 export default function SearchScreen() {
+    console.log('SearchScreen rendered');
     const router = useRouter();
     const [location, setLocation] = useState('');
     const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
@@ -42,6 +43,7 @@ export default function SearchScreen() {
             setCategories((data || []) as any);
         } catch (e: any) {
             console.error('SearchScreen: Load categories error:', e);
+            Alert.alert('Error', e?.message || 'Failed to load categories');
         } finally {
             setCategoriesLoading(false);
         }
@@ -76,6 +78,7 @@ export default function SearchScreen() {
     const handleSearch = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         const categoryId = selectedCategory?.id;
+        console.log('Searching for category:', categoryId, 'in', location);
         router.push({
             pathname: '/(tabs)/services',
             params: {
