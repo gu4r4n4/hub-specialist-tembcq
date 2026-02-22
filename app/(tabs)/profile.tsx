@@ -294,10 +294,22 @@ export default function ProfileScreen() {
             <Text style={styles.modalBoxTitle}>Sign Out</Text>
             <Text style={styles.modalBoxText}>Are you sure you want to exit?</Text>
             <View style={styles.modalBoxActions}>
-              <TouchableOpacity style={[styles.modalBoxBtn, styles.cancelBtn]} onPress={() => setShowSignOutModal(false)}>
+              <TouchableOpacity
+                style={[styles.modalBoxBtn, styles.cancelBtn]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowSignOutModal(false);
+                }}
+              >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBoxBtn, styles.confirmBtn]} onPress={handleSignOut}>
+              <TouchableOpacity
+                style={[styles.modalBoxBtn, styles.confirmBtn]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  handleSignOut();
+                }}
+              >
                 <Text style={styles.confirmBtnText}>Sign Out</Text>
               </TouchableOpacity>
             </View>
@@ -312,10 +324,22 @@ export default function ProfileScreen() {
             <Text style={styles.modalBoxTitle}>Preview</Text>
             {selectedImage && <Image source={{ uri: selectedImage }} style={styles.previewImage} />}
             <View style={styles.modalBoxActions}>
-              <TouchableOpacity style={[styles.modalBoxBtn, styles.cancelBtn]} onPress={() => setShowPreviewModal(false)}>
+              <TouchableOpacity
+                style={[styles.modalBoxBtn, styles.cancelBtn]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setShowPreviewModal(false);
+                }}
+              >
                 <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBoxBtn, styles.confirmBtn]} onPress={handleSaveImage}>
+              <TouchableOpacity
+                style={[styles.modalBoxBtn, styles.confirmBtn]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  handleSaveImage();
+                }}
+              >
                 <Text style={styles.confirmBtnText}>Save</Text>
               </TouchableOpacity>
             </View>
@@ -532,15 +556,20 @@ const styles = StyleSheet.create({
   modalBoxActions: {
     flexDirection: 'row',
     gap: spacing.md,
+    width: '100%',
   },
   modalBoxBtn: {
     flex: 1,
-    paddingVertical: spacing.md,
+    height: 52,
     borderRadius: borderRadius.md,
+    justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: spacing.sm,
   },
   cancelBtn: {
     backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   cancelBtnText: {
     color: colors.textSecondary,
