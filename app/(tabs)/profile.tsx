@@ -25,6 +25,7 @@ export default function ProfileScreen() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewType, setPreviewType] = useState<'profile' | 'portfolio'>('profile');
+  const [replacingImageId, setReplacingImageId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || !profile)) {
@@ -84,7 +85,8 @@ export default function ProfileScreen() {
     router.replace('/(tabs)/(home)');
   };
 
-  const openGallery = async (type: 'profile' | 'portfolio') => {
+  const openGallery = async (type: 'profile' | 'portfolio', replacingId: string | null = null) => {
+    setReplacingImageId(replacingId);
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       Keyboard.dismiss();
@@ -130,15 +132,22 @@ export default function ProfileScreen() {
       if (previewType === 'profile') {
         await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('id', profile.id);
       } else {
-        await supabase.from('specialist_portfolio_images').insert({
-          specialist_profile_id: profile.id,
-          image_url: publicUrl,
-          sort_order: portfolioImages.length,
-        });
+        if (replacingImageId) {
+          await supabase.from('specialist_portfolio_images')
+            .update({ image_url: publicUrl })
+            .eq('id', replacingImageId);
+        } else {
+          await supabase.from('specialist_portfolio_images').insert({
+            specialist_profile_id: profile.id,
+            image_url: publicUrl,
+            sort_order: portfolioImages.length,
+          });
+        }
         fetchPortfolioImages();
+        setReplacingImageId(null);
       }
       await refreshProfile();
-      Alert.alert('Success', 'Image saved successfully');
+      Alert.alert('Success', replacingImageId ? 'Image replaced successfully' : 'Image saved successfully');
     } catch (error: any) {
       Alert.alert('Upload Failed', error.message);
     } finally {
@@ -146,24 +155,41 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleDeletePortfolioImage = (imageId: string, imageUrl: string) => {
-    Alert.alert('Delete Image', 'Remove this image from your portfolio?', [
-      { text: 'Cancel', style: 'cancel' },
+  const handlePortfolioImagePress = (imageId: string, imageUrl: string) => {
+    Alert.alert('Manage Image', 'What would you like to do with this image?', [
+      {
+        text: 'Replace',
+        onPress: () => openGallery('portfolio', imageId),
+      },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
           setUploadingImage(true);
           try {
-            await supabase.from('specialist_portfolio_images').delete().eq('id', imageId);
+            // 1. Delete from database
+            const { error: dbError } = await supabase
+              .from('specialist_portfolio_images')
+              .delete()
+              .eq('id', imageId);
+
+            if (dbError) throw dbError;
+
+            // 2. Try to delete from storage (extract path from URL)
+            const path = imageUrl.split('portfolio/').pop();
+            if (path) {
+              await supabase.storage.from('portfolio').remove([path]);
+            }
+
             fetchPortfolioImages();
           } catch (e: any) {
-            Alert.alert('Error', 'Failed to delete image');
+            Alert.alert('Error', 'Failed to delete image: ' + e.message);
           } finally {
             setUploadingImage(false);
           }
         },
       },
+      { text: 'Cancel', style: 'cancel' },
     ]);
   };
 
@@ -238,7 +264,7 @@ export default function ProfileScreen() {
               ) : (
                 <View style={styles.portfolioGrid}>
                   {portfolioImages.map(img => (
-                    <TouchableOpacity key={img.id} style={styles.portfolioItem} onPress={() => handleDeletePortfolioImage(img.id, img.image_url)}>
+                    <TouchableOpacity key={img.id} style={styles.portfolioItem} onPress={() => handlePortfolioImagePress(img.id, img.image_url)}>
                       <Image source={{ uri: img.image_url }} style={styles.portfolioImage} />
                       <View style={styles.deleteOverlay}>
                         <IconSymbol ios_icon_name="trash.fill" android_material_icon_name="delete" size={14} color="#FFF" />
