@@ -341,14 +341,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   categoryBadge: {
-    backgroundColor: colors.primaryLight,
+    backgroundColor: colors.backgroundSecondary,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: borderRadius.sm,
   },
   categoryBadgeText: {
     ...typography.caption,
-    color: colors.primary,
+    color: colors.text,
     fontWeight: '700',
   },
   ratingBadge: {
