@@ -251,12 +251,18 @@ export default function HomeScreen() {
                     })()}
 
                     <View style={styles.specialistSummary}>
-                      <IconSymbol
-                        ios_icon_name="person.circle.fill"
-                        android_material_icon_name="account-circle"
-                        size={24}
-                        color={colors.primary}
-                      />
+                      {service.specialist?.avatar_url ? (
+                        <Image source={{ uri: service.specialist.avatar_url }} style={styles.specialistAvatar} />
+                      ) : (
+                        <View style={styles.specialistAvatarFallback}>
+                          <IconSymbol
+                            ios_icon_name="person.fill"
+                            android_material_icon_name="person"
+                            size={16}
+                            color={colors.primary}
+                          />
+                        </View>
+                      )}
                       <View style={styles.specialistInfo}>
                         <Text style={styles.specialistName}>{specialistName}</Text>
                         <View style={styles.ratingContainer}>
@@ -480,6 +486,20 @@ const styles = StyleSheet.create({
   },
   specialistInfo: {
     flex: 1,
+  },
+  specialistAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.background,
+  },
+  specialistAvatarFallback: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   specialistName: {
     ...typography.body,

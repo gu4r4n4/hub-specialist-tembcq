@@ -207,9 +207,13 @@ export default function ServicesScreen() {
                   })()}
 
                   <View style={styles.specialistRow}>
-                    <View style={styles.specialistAvatar}>
-                      <IconSymbol ios_icon_name="person.fill" android_material_icon_name="person" size={20} color={colors.primary} />
-                    </View>
+                    {service.specialist?.avatar_url ? (
+                      <Image source={{ uri: service.specialist.avatar_url }} style={styles.specialistAvatar} />
+                    ) : (
+                      <View style={styles.specialistAvatar}>
+                        <IconSymbol ios_icon_name="person.fill" android_material_icon_name="person" size={20} color={colors.primary} />
+                      </View>
+                    )}
                     <View style={styles.specialistInfo}>
                       <Text style={styles.specialistName}>{specialistName}</Text>
                       <View style={styles.ratingRow}>
