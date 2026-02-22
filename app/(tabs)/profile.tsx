@@ -11,6 +11,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { Keyboard } from 'react-native';
 import * as Haptics from 'expo-haptics';
 
+const { width } = Dimensions.get('window');
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, profile, loading, signOut, refreshProfile } = useAuth();
