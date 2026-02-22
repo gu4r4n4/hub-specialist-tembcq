@@ -222,6 +222,19 @@ export default function HomeScreen() {
                     style={styles.serviceCard}
                     onPress={() => handleServicePress(service.id)}
                   >
+                    <View style={styles.serviceHeader}>
+                      <Text style={styles.serviceTitle} numberOfLines={1}>
+                        {service.title}
+                      </Text>
+                      {service.price > 0 && (
+                        <Text style={styles.servicePrice}>{priceText}</Text>
+                      )}
+                    </View>
+
+                    <Text style={styles.serviceDescription} numberOfLines={2}>
+                      {service.description}
+                    </Text>
+
                     {(() => {
                       const portfolio = (service.specialist as any)?.portfolio || [];
                       if (portfolio.length > 0) {
@@ -236,19 +249,6 @@ export default function HomeScreen() {
                       }
                       return null;
                     })()}
-
-                    <View style={styles.serviceHeader}>
-                      <Text style={styles.serviceTitle} numberOfLines={1}>
-                        {service.title}
-                      </Text>
-                      {service.price > 0 && (
-                        <Text style={styles.servicePrice}>{priceText}</Text>
-                      )}
-                    </View>
-
-                    <Text style={styles.serviceDescription} numberOfLines={2}>
-                      {service.description}
-                    </Text>
 
                     <View style={styles.specialistSummary}>
                       <IconSymbol

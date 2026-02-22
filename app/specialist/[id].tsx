@@ -247,6 +247,16 @@ export default function SpecialistDetailScreen() {
                         router.push(`/service/${service.id}`);
                       }}
                     >
+                      <View style={styles.serviceHeader}>
+                        <Text style={styles.serviceTitle}>{service.title}</Text>
+                        {service.price > 0 && (
+                          <Text style={styles.servicePrice}>{priceText}</Text>
+                        )}
+                      </View>
+                      <Text style={styles.serviceDescription} numberOfLines={2}>
+                        {service.description}
+                      </Text>
+
                       {/* Portfolio Random Image */}
                       {(() => {
                         if (portfolioImages.length > 0) {
@@ -261,16 +271,6 @@ export default function SpecialistDetailScreen() {
                         }
                         return null;
                       })()}
-
-                      <View style={styles.serviceHeader}>
-                        <Text style={styles.serviceTitle}>{service.title}</Text>
-                        {service.price > 0 && (
-                          <Text style={styles.servicePrice}>{priceText}</Text>
-                        )}
-                      </View>
-                      <Text style={styles.serviceDescription} numberOfLines={2}>
-                        {service.description}
-                      </Text>
                       <View style={styles.serviceFooter}>
                         <View style={styles.serviceInfo}>
                           <IconSymbol
