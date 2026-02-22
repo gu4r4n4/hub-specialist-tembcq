@@ -160,11 +160,17 @@ export default function OrderDetailScreen() {
               {history.map((item, index) => (
                 <View key={item.id} style={styles.historyItem}>
                   <View style={styles.timeline}>
-                    <View style={[styles.timelineDot, index === 0 && styles.timelineDotActive]} />
+                    <View style={[
+                      styles.timelineDot,
+                      { backgroundColor: index === 0 ? getStatusColor(item.new_status) : colors.border }
+                    ]} />
                     {index < history.length - 1 && <View style={styles.timelineLine} />}
                   </View>
                   <View style={styles.historyContent}>
-                    <Text style={[styles.historyStatus, index === 0 && styles.historyStatusActive]}>
+                    <Text style={[
+                      styles.historyStatus,
+                      { color: index === 0 ? getStatusColor(item.new_status) : colors.textSecondary }
+                    ]}>
                       {item.new_status.toUpperCase().replace('_', ' ')}
                     </Text>
                     <Text style={styles.historyDate}>
@@ -364,14 +370,8 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: colors.border,
     marginTop: 4,
     zIndex: 2,
-  },
-  timelineDotActive: {
-    backgroundColor: colors.primary,
-    ringWidth: 4,
-    ringColor: colors.primaryLight,
   },
   timelineLine: {
     width: 2,
@@ -387,11 +387,7 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontWeight: '700',
     fontSize: 15,
-    color: colors.textSecondary,
     marginBottom: 2,
-  },
-  historyStatusActive: {
-    color: colors.text,
   },
   historyDate: {
     ...typography.caption,
