@@ -52,10 +52,10 @@ export default function ServiceDetailScreen() {
     try {
       const { data, error } = await supabase
         .from('services')
-        .select('*, specialist:profiles!specialist_profile_id(*), category:categories(*)')
+        .select('*, specialist:profiles!specialist_profile_id(*, portfolio:specialist_portfolio_images(*)), category:categories(*)')
         .eq('id', id)
         .single();
-      if (!error) setService(data);
+      if (!error) setService(data as any);
 
       loadReviews();
       loadRatingBreakdown();
@@ -178,6 +178,30 @@ export default function ServiceDetailScreen() {
           )}
           <Text style={styles.description}>{service.description}</Text>
         </View>
+
+        {/* Specialist Gallery */}
+        {(() => {
+          const portfolio = (service.specialist as any)?.portfolio || [];
+          if (portfolio.length > 0) {
+            return (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Work Examples</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.galleryContainer}
+                >
+                  {portfolio.map((img: any, index: number) => (
+                    <View key={img.id || index} style={styles.galleryItem}>
+                      <Image source={{ uri: img.image_url }} style={styles.galleryImage} />
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            );
+          }
+          return null;
+        })()}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Provided By</Text>
@@ -497,5 +521,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlignVertical: 'top',
     height: 200,
+  },
+  galleryContainer: {
+    paddingRight: spacing.lg,
+  },
+  galleryItem: {
+    width: 200,
+    height: 150,
+    marginRight: spacing.md,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  galleryImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
 });
