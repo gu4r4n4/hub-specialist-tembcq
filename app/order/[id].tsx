@@ -78,6 +78,19 @@ export default function OrderDetailScreen() {
   const scheduledDate = new Date(order.scheduled_at).toLocaleDateString();
   const scheduledTime = new Date(order.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+  const getStatusColor = (status: OrderStatus) => {
+    switch (status) {
+      case 'new': return colors.textSecondary;
+      case 'confirmed': return '#3498db'; // Blue
+      case 'in_progress': return colors.warning;
+      case 'done': return colors.success;
+      case 'cancelled': return colors.error;
+      default: return colors.primary;
+    }
+  };
+
+  const statusColor = getStatusColor(order.status);
+
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -92,15 +105,17 @@ export default function OrderDetailScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.statusCard}>
           <Text style={styles.statusLabel}>Current Status</Text>
-          <View style={[styles.statusBadge, { backgroundColor: colors.primaryLight }]}>
-            <Text style={styles.statusText}>{order.status.toUpperCase().replace('_', ' ')}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+            <Text style={[styles.statusText, { color: statusColor }]}>{order.status.toUpperCase().replace('_', ' ')}</Text>
           </View>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Service Info</Text>
           <Text style={styles.serviceTitle}>{order.service?.title}</Text>
-          <Text style={styles.price}>{order.service?.currency} {order.service?.price.toFixed(2)}</Text>
+          {order.service && order.service.price > 0 && (
+            <Text style={styles.price}>{order.service.currency} {order.service.price.toFixed(2)}</Text>
+          )}
         </View>
 
         <View style={styles.section}>
@@ -237,7 +252,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
   },
   statusText: {
-    color: colors.primary,
     fontWeight: '800',
     fontSize: 14,
     letterSpacing: 1,
