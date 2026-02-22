@@ -387,7 +387,7 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     ...typography.bodySecondary,
-    color: colors.primary,
+    color: colors.text,
     fontWeight: '600',
   },
   categoriesContainer: {
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
   servicePrice: {
     ...typography.body,
     fontWeight: '700',
-    color: colors.primary,
+    color: colors.text,
   },
   serviceDescription: {
     ...typography.bodySecondary,

@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   servicePrice: {
     ...typography.body,
     fontWeight: '800',
-    color: colors.primary,
+    color: colors.text,
   },
   serviceDescription: {
     ...typography.bodySecondary,

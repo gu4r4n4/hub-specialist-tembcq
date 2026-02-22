@@ -374,7 +374,7 @@ const styles = StyleSheet.create({
   },
   price: {
     ...typography.h2,
-    color: colors.primary,
+    color: colors.text,
     fontWeight: '800',
     marginBottom: spacing.lg,
   },
