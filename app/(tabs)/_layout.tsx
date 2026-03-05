@@ -1,4 +1,4 @@
-import { Stack, Href } from 'expo-router';
+import { Stack, Href, usePathname } from 'expo-router';
 import FloatingTabBar from '@/components/FloatingTabBar';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -8,6 +8,7 @@ export default function TabLayout() {
   const { profile } = useAuth();
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!profile) return;
@@ -55,7 +56,7 @@ export default function TabLayout() {
       msgSubscription.unsubscribe();
       orderSubscription.unsubscribe();
     };
-  }, [profile]);
+  }, [profile, pathname]);
 
   const tabs = [
     {
