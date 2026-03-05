@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Hub Specialist",
-    "slug": "Hub Specialist",
+    "name": "Profi",
+    "slug": "profi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon-mlt.png",
@@ -39,7 +39,7 @@
       "expo-web-browser",
       "expo-image-picker"
     ],
-    "scheme": "Hub Specialist",
+    "scheme": "profi",
     "experiments": {
       "typedRoutes": true
     },
