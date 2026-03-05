@@ -33,6 +33,7 @@ export default function ServiceDetailScreen() {
   const [reviewsLoading, setReviewsLoading] = useState(true);
   const [canReview, setCanReview] = useState(false);
   const [ratingBreakdown, setRatingBreakdown] = useState<RatingBreakdown[]>([]);
+  const [specialistRating, setSpecialistRating] = useState<{ avg: number; count: number }>({ avg: 0, count: 0 });
 
   // Review modal state
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -55,7 +56,23 @@ export default function ServiceDetailScreen() {
         .select('*, specialist:profiles!specialist_profile_id(*, portfolio:specialist_portfolio_images(*)), category:categories(*)')
         .eq('id', id)
         .single();
-      if (!error) setService(data as any);
+      if (!error) {
+        setService(data as any);
+
+        // Fetch specialist's aggregate rating
+        const { data: specServices } = await supabase
+          .from('services')
+          .select('rating_avg, rating_count')
+          .eq('specialist_profile_id', data.specialist_profile_id);
+
+        if (specServices) {
+          const totalReviews = specServices.reduce((sum, s) => sum + s.rating_count, 0);
+          const avgRating = totalReviews > 0
+            ? specServices.reduce((sum, s) => sum + (s.rating_avg * s.rating_count), 0) / totalReviews
+            : 0;
+          setSpecialistRating({ avg: avgRating, count: totalReviews });
+        }
+      }
 
       loadReviews();
       loadRatingBreakdown();
@@ -255,6 +272,12 @@ export default function ServiceDetailScreen() {
             </View>
             <View style={styles.specialistInfo}>
               <Text style={styles.specialistName}>{service.specialist?.full_name}</Text>
+              <View style={styles.specialistRatingSmall}>
+                <IconSymbol ios_icon_name="star.fill" android_material_icon_name="star" size={12} color={colors.warning} />
+                <Text style={styles.specialistRatingText}>
+                  {specialistRating.count > 0 ? `${specialistRating.avg.toFixed(1)} (${specialistRating.count})` : 'No reviews'}
+                </Text>
+              </View>
               <Text style={styles.specialistCity}>{service.specialist?.city || 'No location set'}</Text>
             </View>
             <IconSymbol ios_icon_name="chevron.right" android_material_icon_name="chevron-right" size={20} color={colors.textTertiary} />
@@ -460,6 +483,18 @@ const styles = StyleSheet.create({
   },
   specialistInfo: {
     flex: 1,
+  },
+  specialistRatingSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
+  },
+  specialistRatingText: {
+    ...typography.caption,
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
   },
   specialistName: {
     ...typography.body,

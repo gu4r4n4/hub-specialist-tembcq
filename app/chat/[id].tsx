@@ -147,8 +147,9 @@ export default function ChatDetailScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
         try {
+            const tempId = 'temp-' + Date.now();
             const optimisticMsg: Message = {
-                id: 'temp-' + Date.now(),
+                id: tempId,
                 chat_id: id as string,
                 sender_profile_id: profile.id,
                 content: textToSend,
@@ -164,14 +165,17 @@ export default function ChatDetailScreen() {
                 content: textToSend,
             });
 
-            if (error) throw error;
+            if (error) {
+                setMessages(prev => prev.filter(m => m.id !== tempId));
+                throw error;
+            }
 
             // Update chat's updated_at
             await supabase.from('chats').update({ updated_at: new Date().toISOString() }).eq('id', id);
         } catch (err: any) {
             console.error('Error sending message:', err);
-            Alert.alert('Error', 'Failed to send message');
-            setNewMessage(textToSend); // Restore message
+            Alert.alert('Error', `Failed to send: ${err.message || 'Unknown error'}`);
+            setNewMessage(textToSend);
         } finally {
             setSending(false);
         }
