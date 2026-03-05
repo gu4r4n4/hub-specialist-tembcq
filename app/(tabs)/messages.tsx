@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
@@ -87,10 +87,11 @@ export default function MessagesScreen() {
                 };
             });
 
-            console.log(`Loaded ${formattedChats.length} chats for profile ${profile.id}`);
+            console.log(`Messages tab: Found ${formattedChats.length} chats for profile ${profile.id}`);
             setChats(formattedChats);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error loading chats:', err);
+            Alert.alert('Load Error', err.message || 'Unknown error');
         } finally {
             setLoading(false);
         }
