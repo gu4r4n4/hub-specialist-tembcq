@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Order } from '@/types/database';
 import { IconSymbol } from '@/components/IconSymbol';
 import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 export default function OrdersScreen() {
   const router = useRouter();
@@ -15,13 +17,15 @@ export default function OrdersScreen() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user && profile) {
-      loadOrders();
-    } else {
-      setLoading(false);
-    }
-  }, [user, profile]);
+  useFocusEffect(
+    useCallback(() => {
+      if (user && profile) {
+        loadOrders();
+      } else {
+        setLoading(false);
+      }
+    }, [user, profile])
+  );
 
   const loadOrders = async () => {
     if (!isSupabaseConfigured || !profile) {
@@ -159,15 +163,24 @@ export default function OrdersScreen() {
               const statusLabel = getStatusLabel(order.status);
               const statusColor = getStatusColor(order.status);
 
+              const isNew = order.status === 'new' && profile?.role === 'specialist';
+
               return (
                 <TouchableOpacity
                   key={order.id}
-                  style={styles.orderCard}
+                  style={[styles.orderCard, isNew && styles.orderCardNew]}
                   onPress={() => handleOrderPress(order.id)}
                 >
                   <View style={styles.orderHeader}>
                     <View style={styles.titleContainer}>
-                      <Text style={styles.orderTitle} numberOfLines={1}>{serviceTitle}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={styles.orderTitle} numberOfLines={1}>{serviceTitle}</Text>
+                        {isNew && (
+                          <View style={styles.newIndicator}>
+                            <Text style={styles.newIndicatorText}>NEW</Text>
+                          </View>
+                        )}
+                      </View>
                       <Text style={styles.otherPersonName}>{otherPersonName}</Text>
                     </View>
                     <View style={[styles.statusBadge, { backgroundColor: statusColor + '10' }]}>
@@ -325,5 +338,21 @@ const styles = StyleSheet.create({
   infoText: {
     ...typography.caption,
     fontSize: 12,
+  },
+  orderCardNew: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+    backgroundColor: '#FFF9FA',
+  },
+  newIndicator: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  newIndicatorText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: '900',
   },
 });

@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Chat } from '@/types/database';
 import { IconSymbol } from '@/components/IconSymbol';
 import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 export default function MessagesScreen() {
     const router = useRouter();
@@ -15,13 +17,15 @@ export default function MessagesScreen() {
     const [chats, setChats] = useState<Chat[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        if (user && profile) {
-            loadChats();
-        } else {
-            setLoading(false);
-        }
-    }, [user, profile]);
+    useFocusEffect(
+        useCallback(() => {
+            if (user && profile) {
+                loadChats();
+            } else {
+                setLoading(false);
+            }
+        }, [user, profile])
+    );
 
     const loadChats = async () => {
         if (!isSupabaseConfigured || !profile) return;
@@ -29,12 +33,36 @@ export default function MessagesScreen() {
         try {
             const { data, error } = await supabase
                 .from('chats')
-                .select('*, service:services(*), consumer:profiles!consumer_profile_id(*), specialist:profiles!specialist_profile_id(*)')
+                .select(`
+                    *,
+                    service:services(*),
+                    consumer:profiles!consumer_profile_id(*),
+                    specialist:profiles!specialist_profile_id(*),
+                    messages(id, content, created_at, is_read, sender_profile_id)
+                `)
                 .or(`consumer_profile_id.eq.${profile.id},specialist_profile_id.eq.${profile.id}`)
                 .order('updated_at', { ascending: false });
 
             if (error) throw error;
-            setChats(data as any || []);
+
+            // Format chats and calculate unread count
+            const formattedChats = (data as any[]).map(chat => {
+                const unreadCount = chat.messages?.filter((m: any) =>
+                    !m.is_read && m.sender_profile_id !== profile.id
+                ).length || 0;
+
+                const lastMessage = chat.messages?.sort((a: any, b: any) =>
+                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                )[0];
+
+                return {
+                    ...chat,
+                    unreadCount,
+                    lastMessage: lastMessage?.content || chat.service?.title
+                };
+            });
+
+            setChats(formattedChats);
         } catch (err) {
             console.error('Error loading chats:', err);
         } finally {
@@ -98,13 +126,19 @@ export default function MessagesScreen() {
                                 </View>
                                 <View style={styles.chatInfo}>
                                     <Text style={styles.chatName}>{otherPerson?.full_name}</Text>
-                                    <Text style={styles.chatService} numberOfLines={1}>{item.service?.title}</Text>
+                                    <Text style={styles.chatService} numberOfLines={1}>{(item as any).lastMessage}</Text>
                                 </View>
                                 <View style={styles.chatMeta}>
                                     <Text style={styles.chatTime}>
                                         {new Date(item.updated_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                     </Text>
-                                    <IconSymbol ios_icon_name="chevron.right" android_material_icon_name="chevron-right" size={16} color={colors.textTertiary} />
+                                    {(item as any).unreadCount > 0 ? (
+                                        <View style={styles.unreadBadge}>
+                                            <Text style={styles.unreadBadgeText}>{(item as any).unreadCount}</Text>
+                                        </View>
+                                    ) : (
+                                        <IconSymbol ios_icon_name="chevron.right" android_material_icon_name="chevron-right" size={16} color={colors.textTertiary} />
+                                    )}
                                 </View>
                             </TouchableOpacity>
                         );
@@ -209,5 +243,19 @@ const styles = StyleSheet.create({
     buttonText: {
         color: '#FFF',
         fontWeight: '700',
+    },
+    unreadBadge: {
+        backgroundColor: colors.primary,
+        minWidth: 20,
+        height: 20,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 6,
+    },
+    unreadBadgeText: {
+        color: '#FFF',
+        fontSize: 10,
+        fontWeight: '900',
     },
 });

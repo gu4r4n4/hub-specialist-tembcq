@@ -296,15 +296,17 @@ export default function HomeScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      <TouchableOpacity style={styles.fabExtended} onPress={handleAddListing}>
-        <IconSymbol
-          android_material_icon_name="add"
-          ios_icon_name="plus"
-          size={24}
-          color="#FFFFFF"
-        />
-        <Text style={styles.fabText}>List Service</Text>
-      </TouchableOpacity>
+      {profile?.role === 'specialist' && (
+        <TouchableOpacity style={styles.fabExtended} onPress={handleAddListing}>
+          <IconSymbol
+            android_material_icon_name="add"
+            ios_icon_name="plus"
+            size={24}
+            color="#FFFFFF"
+          />
+          <Text style={styles.fabText}>List Service</Text>
+        </TouchableOpacity>
+      )}
     </SafeAreaView>
   );
 }

@@ -64,6 +64,9 @@ export default function ChatDetailScreen() {
 
             if (msgError) throw msgError;
             setMessages(initialMessages || []);
+
+            // Mark these messages as read
+            markAsRead();
         } catch (err: any) {
             console.error('Error loading chat:', err);
             Alert.alert('Error', 'Failed to load conversation');
@@ -72,12 +75,26 @@ export default function ChatDetailScreen() {
         }
     };
 
+    const markAsRead = async () => {
+        if (!id || !profile) return;
+        try {
+            await supabase
+                .from('messages')
+                .update({ is_read: true })
+                .eq('chat_id', id)
+                .neq('sender_profile_id', profile.id)
+                .eq('is_read', false);
+        } catch (e) {
+            console.error('Error marking as read:', e);
+        }
+    };
+
     const subscribeToMessages = () => {
         if (!id) return null;
         return supabase
             .channel(`chat:${id}`)
             .on(
-                'postgres_changes',
+                'postgres_changes' as any,
                 {
                     event: 'INSERT',
                     schema: 'public',
@@ -86,7 +103,32 @@ export default function ChatDetailScreen() {
                 },
                 (payload) => {
                     const newMsg = payload.new as Message;
-                    setMessages((current) => [...current, newMsg]);
+
+                    setMessages((current) => {
+                        // Avoid duplicates from optimistic update
+                        if (current.some(m => m.id === newMsg.id)) return current;
+
+                        // If we have an optimistic message with same content and sender, replace it
+                        const optimisticIdx = current.findIndex(m =>
+                            m.id.startsWith('temp-') &&
+                            m.content === newMsg.content &&
+                            m.sender_profile_id === newMsg.sender_profile_id
+                        );
+
+                        if (optimisticIdx !== -1) {
+                            const newMessages = [...current];
+                            newMessages[optimisticIdx] = newMsg;
+                            return newMessages;
+                        }
+
+                        return [...current, newMsg];
+                    });
+
+                    // If it's from the other person, mark it read
+                    if (newMsg.sender_profile_id !== profile?.id) {
+                        markAsRead();
+                    }
+
                     // Auto scroll to bottom
                     setTimeout(() => {
                         flatListRef.current?.scrollToEnd({ animated: true });
@@ -105,6 +147,17 @@ export default function ChatDetailScreen() {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
         try {
+            const optimisticMsg: Message = {
+                id: 'temp-' + Date.now(),
+                chat_id: id as string,
+                sender_profile_id: profile.id,
+                content: textToSend,
+                is_read: false,
+                created_at: new Date().toISOString(),
+            };
+
+            setMessages(prev => [...prev, optimisticMsg]);
+
             const { error } = await supabase.from('messages').insert({
                 chat_id: id as string,
                 sender_profile_id: profile.id,

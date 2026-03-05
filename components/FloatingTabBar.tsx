@@ -29,6 +29,7 @@ export interface TabBarItem {
   route: Href;
   icon: keyof typeof MaterialIcons.glyphMap;
   label: string;
+  badge?: boolean;
 }
 
 interface FloatingTabBarProps {
@@ -131,12 +132,17 @@ export default function FloatingTabBar({
                   activeOpacity={1}
                 >
                   <Animated.View style={styles.tabContent}>
-                    <IconSymbol
-                      android_material_icon_name={tab.icon}
-                      ios_icon_name={tab.icon}
-                      size={24}
-                      color={isActive ? colors.primary : colors.textTertiary}
-                    />
+                    <View>
+                      <IconSymbol
+                        android_material_icon_name={tab.icon}
+                        ios_icon_name={tab.icon}
+                        size={24}
+                        color={isActive ? colors.primary : colors.textTertiary}
+                      />
+                      {tab.badge && (
+                        <View style={styles.badge} />
+                      )}
+                    </View>
                     <Text
                       style={[
                         styles.tabLabel,
@@ -212,5 +218,16 @@ const styles = StyleSheet.create({
   tabLabel: {
     fontSize: 10,
     fontWeight: '500',
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
+    borderWidth: 2,
+    borderColor: '#FFF',
   },
 });
