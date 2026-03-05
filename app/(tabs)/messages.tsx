@@ -21,6 +21,25 @@ export default function MessagesScreen() {
         useCallback(() => {
             if (user && profile) {
                 loadChats();
+
+                // Subscribe to changes in messages and chats to refresh the list
+                const chatSubscription = supabase
+                    .channel('messages-tab-refresh')
+                    .on('postgres_changes' as any, {
+                        event: '*',
+                        schema: 'public',
+                        table: 'messages'
+                    }, () => loadChats())
+                    .on('postgres_changes' as any, {
+                        event: '*',
+                        schema: 'public',
+                        table: 'chats'
+                    }, () => loadChats())
+                    .subscribe();
+
+                return () => {
+                    chatSubscription.unsubscribe();
+                };
             } else {
                 setLoading(false);
             }
@@ -47,21 +66,28 @@ export default function MessagesScreen() {
 
             // Format chats and calculate unread count
             const formattedChats = (data as any[]).map(chat => {
-                const unreadCount = chat.messages?.filter((m: any) =>
-                    !m.is_read && m.sender_profile_id !== profile.id
-                ).length || 0;
+                const chatMessages = chat.messages || [];
 
-                const lastMessage = chat.messages?.sort((a: any, b: any) =>
+                // Unread are messages NOT sent by me and marked is_read=false
+                const unreadCount = chatMessages.filter((m: any) =>
+                    !m.is_read && m.sender_profile_id !== profile.id
+                ).length;
+
+                // Get the most recent message
+                const sortedMsgs = [...chatMessages].sort((a: any, b: any) =>
                     new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                )[0];
+                );
+
+                const lastMsg = sortedMsgs[0];
 
                 return {
                     ...chat,
                     unreadCount,
-                    lastMessage: lastMessage?.content || chat.service?.title
+                    lastMessage: lastMsg?.content || chat.service?.title || 'No messages yet'
                 };
             });
 
+            console.log(`Loaded ${formattedChats.length} chats for profile ${profile.id}`);
             setChats(formattedChats);
         } catch (err) {
             console.error('Error loading chats:', err);
