@@ -19,6 +19,12 @@ export default function TabLayout() {
       icon: 'work' as const,
     },
     {
+      name: 'messages',
+      route: '/(tabs)/messages' as Href,
+      label: 'Messages',
+      icon: 'chat' as const,
+    },
+    {
       name: 'orders',
       route: '/(tabs)/orders' as Href,
       label: 'Orders',
@@ -37,6 +43,7 @@ export default function TabLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(home)" options={{ headerShown: false }} />
         <Stack.Screen name="services" options={{ headerShown: false }} />
+        <Stack.Screen name="messages" options={{ headerShown: false }} />
         <Stack.Screen name="orders" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
       </Stack>

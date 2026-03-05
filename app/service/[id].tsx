@@ -105,10 +105,53 @@ export default function ServiceDetailScreen() {
     }
   };
 
-  const handleBook = () => {
+  const handleChat = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    if (!user) router.push('/auth/login');
-    else router.push(`/booking/${id}`);
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
+
+    if (!profile || !service || profile.id === service.specialist_profile_id) {
+      if (profile?.id === service?.specialist_profile_id) {
+        Alert.alert('Note', 'You cannot message your own listing.');
+      }
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Find or create chat
+      const { data: existingChat, error: findError } = await supabase
+        .from('chats')
+        .select('id')
+        .eq('consumer_profile_id', profile.id)
+        .eq('specialist_profile_id', service.specialist_profile_id)
+        .eq('service_id', service.id)
+        .maybeSingle();
+
+      if (existingChat) {
+        router.push(`/chat/${existingChat.id}` as any);
+      } else {
+        const { data: newChat, error: createError } = await supabase
+          .from('chats')
+          .insert({
+            consumer_profile_id: profile.id,
+            specialist_profile_id: service.specialist_profile_id,
+            service_id: service.id,
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        router.push(`/chat/${newChat.id}` as any);
+      }
+    } catch (err: any) {
+      Alert.alert('Error', 'Failed to start a conversation');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const pickImages = async () => {
@@ -251,8 +294,8 @@ export default function ServiceDetailScreen() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <TouchableOpacity style={styles.bookButton} onPress={handleBook}>
-          <Text style={styles.bookButtonText}>Book Service</Text>
+        <TouchableOpacity style={styles.bookButton} onPress={handleChat}>
+          <Text style={styles.bookButtonText}>Message Specialist</Text>
         </TouchableOpacity>
       </View>
 

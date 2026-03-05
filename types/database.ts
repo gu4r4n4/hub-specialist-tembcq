@@ -77,3 +77,23 @@ export interface OrderStatusHistory {
   changed_by: string;
   created_at: string;
 }
+
+export interface Chat {
+  id: string;
+  consumer_profile_id: string;
+  specialist_profile_id: string;
+  service_id: string;
+  created_at: string;
+  updated_at: string;
+  service?: Service;
+  consumer?: Profile;
+  specialist?: Profile;
+}
+
+export interface Message {
+  id: string;
+  chat_id: string;
+  sender_profile_id: string;
+  content: string;
+  created_at: string;
+}
