@@ -24,13 +24,21 @@ export default function TabLayout() {
 
       setHasUnreadMessages(!!messages && messages.length > 0);
 
-      // New/Unconfirmed orders (for specialists) or updated orders (for consumers)
+      // New/Unread orders
       if (profile.role === 'specialist') {
         const { data: orders } = await supabase
           .from('orders')
           .select('id')
-          .eq('status', 'new')
+          .eq('is_read_by_specialist', false)
           .eq('specialist_profile_id', profile.id)
+          .limit(1);
+        setHasUnreadOrders(!!orders && orders.length > 0);
+      } else {
+        const { data: orders } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('is_read_by_consumer', false)
+          .eq('consumer_profile_id', profile.id)
           .limit(1);
         setHasUnreadOrders(!!orders && orders.length > 0);
       }

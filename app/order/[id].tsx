@@ -30,13 +30,30 @@ export default function OrderDetailScreen() {
   const loadOrder = async () => {
     if (!id) return;
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('orders')
       .select('*, service:services(*), consumer:profiles!consumer_profile_id(*), specialist:profiles!specialist_profile_id(*)')
       .eq('id', id)
       .single();
-    if (data) setOrder(data);
+
+    if (data && !error) {
+      setOrder(data);
+      markAsRead(data);
+    }
     setLoading(false);
+  };
+
+  const markAsRead = async (orderData: Order) => {
+    if (!profile) return;
+    try {
+      if (profile.role === 'specialist' && !orderData.is_read_by_specialist) {
+        await supabase.from('orders').update({ is_read_by_specialist: true }).eq('id', orderData.id);
+      } else if (profile.role === 'consumer' && !orderData.is_read_by_consumer) {
+        await supabase.from('orders').update({ is_read_by_consumer: true }).eq('id', orderData.id);
+      }
+    } catch (e) {
+      console.error('Error marking order as read:', e);
+    }
   };
 
   const loadHistory = async () => {
@@ -55,7 +72,16 @@ export default function OrderDetailScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setUpdating(true);
     try {
-      const { error } = await supabase.from('orders').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', id);
+      const updates: any = { status: newStatus, updated_at: new Date().toISOString() };
+
+      // When status changes, the OTHER party needs to see it as unread
+      if (profile?.role === 'specialist') {
+        updates.is_read_by_consumer = false;
+      } else {
+        updates.is_read_by_specialist = false;
+      }
+
+      const { error } = await supabase.from('orders').update(updates).eq('id', id);
       if (!error) {
         loadOrder();
         loadHistory();

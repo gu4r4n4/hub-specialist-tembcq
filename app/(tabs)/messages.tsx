@@ -77,42 +77,23 @@ export default function MessagesScreen() {
                 throw error;
             }
 
-            console.log('Full query data count:', data?.length);
-            if (data && data.length > 0) {
-                console.log('First chat details:', JSON.stringify(data[0], null, 2));
-            }
-
-            // Format chats and calculate unread count
+            // Format chats and determine unread status
             const formattedChats = (data as any[]).map(chat => {
                 const chatMessages = chat.messages || [];
-
-                // Unread are messages NOT sent by me and marked is_read=false
-                const unreadCount = chatMessages.filter((m: any) =>
-                    !m.is_read && m.sender_profile_id !== profile.id
-                ).length;
-
-                // Get the most recent message
-                const sortedMsgs = [...chatMessages].sort((a: any, b: any) =>
-                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                );
-
+                const hasUnread = chatMessages.some((m: any) => !m.is_read && m.sender_profile_id !== profile.id);
+                const sortedMsgs = [...chatMessages].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
                 const lastMsg = sortedMsgs[0];
 
                 return {
                     ...chat,
-                    unreadCount,
+                    hasUnread,
                     lastMessage: lastMsg?.content || chat.service?.title || 'No messages yet'
                 };
             });
 
-            console.log(`Messages tab: Found ${formattedChats.length} chats for profile ${profile.id}`);
-            if (formattedChats.length === 0) {
-                console.log('No chats found in query. Possible RLS issue or incorrect filter.');
-            }
             setChats(formattedChats);
         } catch (err: any) {
             console.error('Error loading chats:', err);
-            Alert.alert('DEBUG: Load Error', err.message || 'Unknown error. Check console.');
         } finally {
             setLoading(false);
         }
@@ -183,10 +164,8 @@ export default function MessagesScreen() {
                                     <Text style={styles.chatTime}>
                                         {new Date(item.updated_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                                     </Text>
-                                    {(item as any).unreadCount > 0 ? (
-                                        <View style={styles.unreadBadge}>
-                                            <Text style={styles.unreadBadgeText}>{(item as any).unreadCount}</Text>
-                                        </View>
+                                    {(item as any).hasUnread ? (
+                                        <View style={styles.unreadDot} />
                                     ) : (
                                         <IconSymbol ios_icon_name="chevron.right" android_material_icon_name="chevron-right" size={16} color={colors.textTertiary} />
                                     )}
@@ -307,18 +286,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '700',
     },
-    unreadBadge: {
+    unreadDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
         backgroundColor: colors.primary,
-        minWidth: 20,
-        height: 20,
-        borderRadius: 10,
-        justifyContent: 'center',
-        alignItems: 'center',
-        paddingHorizontal: 6,
-    },
-    unreadBadgeText: {
-        color: '#FFF',
-        fontSize: 10,
-        fontWeight: '900',
+        marginTop: 4,
     },
 });

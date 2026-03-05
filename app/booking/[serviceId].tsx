@@ -48,6 +48,8 @@ export default function BookingScreen() {
       scheduled_at: scheduledDate.toISOString(),
       address: address.trim(),
       comment: comment.trim() || null,
+      is_read_by_specialist: false,
+      is_read_by_consumer: true,
     }).select().single();
     if (!error) router.replace(`/order/${data.id}`);
     else { setError(error.message); setSubmitting(false); }

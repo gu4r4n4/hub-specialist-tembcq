@@ -58,6 +58,8 @@ export interface Order {
   service?: Service;
   consumer?: Profile;
   specialist?: Profile;
+  is_read_by_specialist: boolean;
+  is_read_by_consumer: boolean;
 }
 
 export interface SpecialistPortfolioImage {
