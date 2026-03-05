@@ -24,7 +24,7 @@ export default function TabLayout() {
 
       setHasUnreadMessages(!!messages && messages.length > 0);
 
-      // New orders (Status = new)
+      // New orders (Status = new) - Only specialists need a dot for new incoming orders
       if (profile.role === 'specialist') {
         const { data: orders } = await supabase
           .from('orders')
@@ -34,13 +34,7 @@ export default function TabLayout() {
           .limit(1);
         setHasUnreadOrders(!!orders && orders.length > 0);
       } else {
-        const { data: orders } = await supabase
-          .from('orders')
-          .select('id')
-          .eq('status', 'new')
-          .eq('consumer_profile_id', profile.id)
-          .limit(1);
-        setHasUnreadOrders(!!orders && orders.length > 0);
+        setHasUnreadOrders(false);
       }
     };
 
