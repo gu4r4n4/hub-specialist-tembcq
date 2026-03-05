@@ -51,24 +51,36 @@ export default function MessagesScreen() {
         setLoading(true);
         try {
             console.log('Fetching chats for profile ID:', profile.id);
+            // First, let's try a very simple query to see if we get ANY chats
+            const { data: simpleData, error: simpleError } = await supabase
+                .from('chats')
+                .select('id')
+                .or(`consumer_profile_id.eq.${profile.id},specialist_profile_id.eq.${profile.id}`);
+
+            console.log('Simple query data:', simpleData);
+            console.log('Simple query error:', simpleError);
+
             const { data, error } = await supabase
                 .from('chats')
                 .select(`
-                    id, consumer_profile_id, specialist_profile_id, service_id, created_at, updated_at,
+                    *,
                     service:services(id, title),
                     consumer:profiles!consumer_profile_id(id, full_name, avatar_url),
                     specialist:profiles!specialist_profile_id(id, full_name, avatar_url),
-                    messages(id, content, created_at, is_read, sender_profile_id)
+                    messages(*)
                 `)
                 .or(`consumer_profile_id.eq.${profile.id},specialist_profile_id.eq.${profile.id}`)
                 .order('updated_at', { ascending: false });
 
             if (error) {
-                console.error('Supabase query error:', error);
+                console.error('Supabase full query error:', error);
                 throw error;
             }
 
-            console.log('Raw data count:', data?.length);
+            console.log('Full query data count:', data?.length);
+            if (data && data.length > 0) {
+                console.log('First chat details:', JSON.stringify(data[0], null, 2));
+            }
 
             // Format chats and calculate unread count
             const formattedChats = (data as any[]).map(chat => {
@@ -94,6 +106,9 @@ export default function MessagesScreen() {
             });
 
             console.log(`Messages tab: Found ${formattedChats.length} chats for profile ${profile.id}`);
+            if (formattedChats.length === 0) {
+                console.log('No chats found in query. Possible RLS issue or incorrect filter.');
+            }
             setChats(formattedChats);
         } catch (err: any) {
             console.error('Error loading chats:', err);
