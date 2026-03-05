@@ -50,19 +50,25 @@ export default function MessagesScreen() {
         if (!isSupabaseConfigured || !profile) return;
         setLoading(true);
         try {
+            console.log('Fetching chats for profile ID:', profile.id);
             const { data, error } = await supabase
                 .from('chats')
                 .select(`
-                    *,
-                    service:services(*),
-                    consumer:profiles!consumer_profile_id(*),
-                    specialist:profiles!specialist_profile_id(*),
+                    id, consumer_profile_id, specialist_profile_id, service_id, created_at, updated_at,
+                    service:services(id, title),
+                    consumer:profiles!consumer_profile_id(id, full_name, avatar_url),
+                    specialist:profiles!specialist_profile_id(id, full_name, avatar_url),
                     messages(id, content, created_at, is_read, sender_profile_id)
                 `)
                 .or(`consumer_profile_id.eq.${profile.id},specialist_profile_id.eq.${profile.id}`)
                 .order('updated_at', { ascending: false });
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase query error:', error);
+                throw error;
+            }
+
+            console.log('Raw data count:', data?.length);
 
             // Format chats and calculate unread count
             const formattedChats = (data as any[]).map(chat => {
@@ -91,7 +97,7 @@ export default function MessagesScreen() {
             setChats(formattedChats);
         } catch (err: any) {
             console.error('Error loading chats:', err);
-            Alert.alert('Load Error', err.message || 'Unknown error');
+            Alert.alert('DEBUG: Load Error', err.message || 'Unknown error. Check console.');
         } finally {
             setLoading(false);
         }
