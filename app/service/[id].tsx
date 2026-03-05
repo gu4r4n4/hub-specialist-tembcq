@@ -316,11 +316,13 @@ export default function ServiceDetailScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.bookButton} onPress={handleChat}>
-          <Text style={styles.bookButtonText}>Message Specialist</Text>
-        </TouchableOpacity>
-      </View>
+      {profile?.role !== 'specialist' && (
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.bookButton} onPress={handleChat}>
+            <Text style={styles.bookButtonText}>Message Specialist</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <Modal visible={showReviewModal} animationType="slide">
         <SafeAreaView style={styles.modalBg}>

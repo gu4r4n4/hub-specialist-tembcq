@@ -24,8 +24,12 @@ export default function BookingScreen() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (profile?.role === 'specialist') {
+      router.back();
+      return;
+    }
     loadService();
-  }, [serviceId]);
+  }, [serviceId, profile]);
 
   const loadService = async () => {
     if (!serviceId) return;
