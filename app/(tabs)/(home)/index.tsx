@@ -83,7 +83,7 @@ export default function HomeScreen() {
           .from('categories')
           .select('*')
           .order('display_order', { ascending: true })
-          .limit(10),
+          .limit(12),
         supabase
           .from('services')
           .select('*, specialist:profiles!specialist_profile_id(*, portfolio:specialist_portfolio_images(*)), category:categories(*)')
@@ -157,12 +157,6 @@ export default function HomeScreen() {
         <View style={styles.banner}>
           <View style={styles.logoRow}>
             <Text style={styles.logoText}>PROFI.UY</Text>
-            <IconSymbol
-              ios_icon_name="star.fill"
-              android_material_icon_name="star"
-              size={24}
-              color={colors.warning}
-            />
           </View>
           <Text style={styles.slogan}>All specialists in one place</Text>
 
@@ -221,7 +215,6 @@ export default function HomeScreen() {
                 const categoryName = service.category?.name || 'Uncategorized';
                 const ratingAvg = service.rating_avg || 0;
                 const ratingCount = service.rating_count || 0;
-                const priceText = `${service.currency} ${service.price.toFixed(2)}`;
                 const ratingText = ratingCount > 0 ? `${ratingAvg.toFixed(1)} (${ratingCount})` : 'No ratings';
 
                 return (
@@ -234,9 +227,6 @@ export default function HomeScreen() {
                       <Text style={styles.serviceTitle} numberOfLines={1}>
                         {service.title}
                       </Text>
-                      {service.price > 0 && (
-                        <Text style={styles.servicePrice}>{priceText}</Text>
-                      )}
                     </View>
 
                     <Text style={styles.serviceDescription} numberOfLines={2}>

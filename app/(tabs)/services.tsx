@@ -163,7 +163,7 @@ export default function ServicesScreen() {
         >
           {services.length === 0 ? (
             <View style={styles.emptyState}>
-              <IconSymbol ios_icon_name="magnifyingglass" android_material_icon_name="search_off" size={48} color={colors.textTertiary} />
+              <IconSymbol ios_icon_name="magnifyingglass" android_material_icon_name="search-off" size={48} color={colors.textTertiary} />
               <Text style={styles.emptyText}>No services found matching your criteria</Text>
             </View>
           ) : (
@@ -171,7 +171,6 @@ export default function ServicesScreen() {
               const specialistName = service.specialist?.full_name || 'Unknown';
               const ratingAvg = service.rating_avg || 0;
               const ratingCount = service.rating_count || 0;
-              const priceText = `${service.currency} ${service.price.toFixed(2)}`;
               const ratingText = ratingCount > 0 ? `${ratingAvg.toFixed(1)} (${ratingCount})` : 'No ratings';
 
               return (
@@ -182,9 +181,6 @@ export default function ServicesScreen() {
                 >
                   <View style={styles.serviceHeader}>
                     <Text style={styles.serviceTitle} numberOfLines={1}>{service.title}</Text>
-                    {service.price > 0 && (
-                      <Text style={styles.servicePrice}>{priceText}</Text>
-                    )}
                   </View>
 
                   <Text style={styles.serviceDescription} numberOfLines={2}>

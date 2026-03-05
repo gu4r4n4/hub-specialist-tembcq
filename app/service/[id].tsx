@@ -173,9 +173,6 @@ export default function ServiceDetailScreen() {
           </View>
 
           <Text style={styles.title}>{service.title}</Text>
-          {service.price > 0 && (
-            <Text style={styles.price}>{service.currency} {service.price.toFixed(2)}</Text>
-          )}
           <Text style={styles.description}>{service.description}</Text>
         </View>
 
@@ -371,12 +368,6 @@ const styles = StyleSheet.create({
     ...typography.h2,
     fontSize: 26,
     marginBottom: 8,
-  },
-  price: {
-    ...typography.h2,
-    color: colors.text,
-    fontWeight: '800',
-    marginBottom: spacing.lg,
   },
   description: {
     ...typography.body,

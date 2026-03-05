@@ -75,7 +75,7 @@ export default function BookingScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.headerCard}>
           <Text style={styles.serviceTitle}>{service.title}</Text>
-          {service.price > 0 && <Text style={styles.price}>{service.currency} {service.price.toFixed(2)}</Text>}
+          <Text style={styles.serviceTitle}>{service.title}</Text>
           <View style={styles.divider} />
           <Text style={styles.specialistName}>Pro: {service.specialist?.full_name}</Text>
         </View>
@@ -193,11 +193,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     textAlign: 'center',
     marginBottom: 4,
-  },
-  price: {
-    ...typography.h2,
-    color: colors.primary,
-    fontWeight: '800',
   },
   divider: {
     width: 40,

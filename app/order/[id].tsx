@@ -113,9 +113,6 @@ export default function OrderDetailScreen() {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Service Info</Text>
           <Text style={styles.serviceTitle}>{order.service?.title}</Text>
-          {order.service && order.service.price > 0 && (
-            <Text style={styles.price}>{order.service.currency} {order.service.price.toFixed(2)}</Text>
-          )}
         </View>
 
         <View style={styles.section}>
@@ -313,11 +310,6 @@ const styles = StyleSheet.create({
     ...typography.h2,
     fontSize: 22,
     marginBottom: 4,
-  },
-  price: {
-    ...typography.h3,
-    color: colors.primary,
-    fontWeight: '700',
   },
   personRow: {
     flexDirection: 'row',

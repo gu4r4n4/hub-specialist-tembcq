@@ -51,7 +51,6 @@ export default function RegisterScreen() {
           <View style={styles.header}>
             <View style={styles.logoRow}>
               <Text style={styles.logoText}>PROFI.UY</Text>
-              <IconSymbol ios_icon_name="star.fill" android_material_icon_name="star" size={28} color={colors.warning} />
             </View>
             <Text style={styles.subtitle}>All specialists in one place</Text>
           </View>

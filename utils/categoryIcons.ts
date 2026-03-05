@@ -9,91 +9,49 @@ export interface CategoryIconMapping {
 
 // Icon mapping by category name
 export const CATEGORY_ICON_MAP: Record<string, CategoryIconMapping> = {
-  'Home Cleaning': {
-    icon_material: 'brush',
-    icon_sf: 'paintbrush.fill',
+  'Tutors': {
+    icon_material: 'school',
+    icon_sf: 'graduationcap.fill',
   },
-  'Handyman / Repairs': {
+  'Repairmen': {
     icon_material: 'handyman',
-    icon_sf: 'wrench.and.screwdriver.fill',
+    icon_sf: 'hammer.fill',
   },
-  'Plumbing': {
-    icon_material: 'plumbing',
-    icon_sf: 'drop.fill',
-  },
-  'Electrical': {
-    icon_material: 'bolt',
-    icon_sf: 'bolt.fill',
-  },
-  'Painting': {
-    icon_material: 'format-paint',
-    icon_sf: 'paintbrush.fill',
-  },
-  'Moving & Delivery': {
-    icon_material: 'local-shipping',
-    icon_sf: 'truck.box.fill',
-  },
-  'Appliance Repair': {
-    // screwdriver/repair
-    icon_material: 'build',
-    icon_sf: 'wrench.and.screwdriver.fill',
-  },
-  'Computer / IT Support': {
-    icon_material: 'computer',
-    icon_sf: 'laptopcomputer',
-  },
-  'Phone Repair': {
-    // phone
-    icon_material: 'phone',
-    icon_sf: 'phone.fill',
-  },
-  'Beauty: Hair & Makeup': {
-    // scissors
+  'Beauty Masters': {
     icon_material: 'content-cut',
     icon_sf: 'scissors',
   },
-  'Nails / Manicure': {
-    icon_material: 'spa',
-    icon_sf: 'hands.sparkles',
+  'Freelancers': {
+    icon_material: 'computer',
+    icon_sf: 'desktopcomputer',
   },
-  'Massage & Wellness': {
-    // hand
-    icon_material: 'pan-tool',
-    icon_sf: 'hand.raised.fill',
+  'Accountants and lawyers': {
+    icon_material: 'description',
+    icon_sf: 'doc.text.fill',
   },
-  'Fitness Trainer': {
-    // dumbbells
-    icon_material: 'fitness-center',
-    icon_sf: 'dumbbell.fill',
+  'Sports coaches': {
+    icon_material: 'emoji-events',
+    icon_sf: 'trophy.fill',
   },
-  'Tutoring': {
-    icon_material: 'school',
-    icon_sf: 'book.fill',
+  'Artists': {
+    icon_material: 'music-note',
+    icon_sf: 'music.note',
   },
-  'Photography': {
-    icon_material: 'photo-camera',
-    icon_sf: 'camera.fill',
+  'Domestic staff': {
+    icon_material: 'auto-awesome',
+    icon_sf: 'sparkles',
   },
-  'Event Services': {
-    icon_material: 'event',
-    icon_sf: 'calendar',
-  },
-  'Car Wash / Detailing': {
-    // car
-    icon_material: 'directions-car',
-    icon_sf: 'car.fill',
-  },
-  'Pet Services': {
+  'Veterinarians': {
     icon_material: 'pets',
     icon_sf: 'pawprint.fill',
   },
-  'Gardening / Landscaping': {
-    icon_material: 'yard',
-    icon_sf: 'leaf.fill',
+  'Driving instructors': {
+    icon_material: 'directions-car',
+    icon_sf: 'car.fill',
   },
-  'Babysitting / Nanny': {
-    icon_material: 'child-care',
-    icon_sf: 'figure.and.child.holdinghands',
+  'Miscellaneous': {
+    icon_material: 'auto-awesome',
+    icon_sf: 'sparkles',
   },
 };
 

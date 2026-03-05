@@ -34,9 +34,6 @@ export default function AddListingScreen() {
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [location, setLocation] = useState('');
-  const [priceEnabled, setPriceEnabled] = useState(false);
-  const [price, setPrice] = useState('');
-  const [currency, setCurrency] = useState('USD');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
@@ -57,7 +54,7 @@ export default function AddListingScreen() {
     if (!isRestoring) {
       saveDraft();
     }
-  }, [selectedCategory, location, priceEnabled, price, currency, title, description, currentStep, isRestoring]);
+  }, [selectedCategory, location, title, description, currentStep, isRestoring]);
 
   const loadCategories = async () => {
     if (!isSupabaseConfigured) return;
@@ -81,9 +78,6 @@ export default function AddListingScreen() {
       const draft = {
         selectedCategory,
         location,
-        priceEnabled,
-        price,
-        currency,
         title,
         description,
         currentStep,
@@ -101,9 +95,6 @@ export default function AddListingScreen() {
         const draft = JSON.parse(savedDraft);
         setSelectedCategory(draft.selectedCategory);
         setLocation(draft.location);
-        setPriceEnabled(draft.priceEnabled);
-        setPrice(draft.price);
-        setCurrency(draft.currency);
         setTitle(draft.title);
         setDescription(draft.description);
         setCurrentStep(draft.currentStep || 1);
@@ -133,10 +124,6 @@ export default function AddListingScreen() {
       }
       if (!location.trim()) {
         setError('Please enter a location');
-        return;
-      }
-      if (priceEnabled && !price.trim()) {
-        setError('Please enter a price');
         return;
       }
       setError('');
@@ -180,8 +167,8 @@ export default function AddListingScreen() {
         category_id: selectedCategory,
         title: title.trim(),
         description: description.trim(),
-        price: priceEnabled ? parseFloat(price) : 0,
-        currency: priceEnabled ? currency : 'USD',
+        price: 0,
+        currency: 'USD',
         city: location.trim() || null,
         is_active: true,
       };
@@ -200,7 +187,7 @@ export default function AddListingScreen() {
   const renderStep1 = () => (
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>Basics</Text>
-      <Text style={styles.stepDescription}>What, where and for how much?</Text>
+      <Text style={styles.stepDescription}>What and where?</Text>
 
       <Text style={styles.inputLabel}>Service Type</Text>
       <TouchableOpacity style={styles.selector} onPress={() => setShowCategoryModal(true)}>
@@ -223,23 +210,6 @@ export default function AddListingScreen() {
         />
       </View>
 
-      <View style={[styles.toggleRow, { marginTop: spacing.lg }]}>
-        <View>
-          <Text style={styles.toggleText}>Set Pricing</Text>
-          <Text style={styles.toggleSubtext}>Leave off for "Price on request"</Text>
-        </View>
-        <Switch value={priceEnabled} onValueChange={setPriceEnabled} trackColor={{ false: colors.border, true: colors.primary }} />
-      </View>
-
-      {priceEnabled && (
-        <View style={styles.priceRow}>
-          <View style={[styles.inputWrapper, { flex: 1 }]}>
-            <Text style={styles.currencyPrefix}>$</Text>
-            <TextInput style={styles.inputWithPrefix} placeholder="0.00" value={price} onChangeText={setPrice} keyboardType="decimal-pad" />
-          </View>
-          <TextInput style={[styles.input, { width: 80, marginBottom: 0 }]} value={currency} onChangeText={setCurrency} autoCapitalize="characters" maxLength={3} />
-        </View>
-      )}
     </View>
   );
 

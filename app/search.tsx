@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Modal, Pressable, Alert, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, typography } from '@/styles/commonStyles';
@@ -17,6 +17,7 @@ export default function SearchScreen() {
     console.log('SearchScreen rendered');
     const router = useRouter();
     const [location, setLocation] = useState('');
+    const [keyword, setKeyword] = useState('');
     const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
     const [categoriesLoading, setCategoriesLoading] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<{ id: string; name: string } | null>(null);
@@ -78,12 +79,13 @@ export default function SearchScreen() {
     const handleSearch = () => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         const categoryId = selectedCategory?.id;
-        console.log('Searching for category:', categoryId, 'in', location);
+        console.log('Searching for keyword:', keyword, 'category:', categoryId, 'in', location);
         router.push({
             pathname: '/(tabs)/services',
             params: {
                 location: location || '',
                 category: categoryId || '',
+                search: keyword || '',
             },
         });
     };
@@ -129,15 +131,35 @@ export default function SearchScreen() {
                 <View style={styles.section}>
                     <Text style={styles.label}>What do you need?</Text>
 
-                    <TouchableOpacity
-                        style={styles.selector}
-                        onPress={() => setShowCategoryModal(true)}
-                        activeOpacity={0.7}
-                    >
+                    <View style={styles.inputWrapper}>
                         <View style={styles.selectorIcon}>
                             <IconSymbol
                                 ios_icon_name="magnifyingglass"
                                 android_material_icon_name="search"
+                                size={22}
+                                color={colors.primary}
+                            />
+                        </View>
+                        <TextInput
+                            style={styles.keywordInput}
+                            placeholder="Keywords (e.g. plumber, cleaning)"
+                            placeholderTextColor={colors.textTertiary}
+                            value={keyword}
+                            onChangeText={setKeyword}
+                            returnKeyType="search"
+                            onSubmitEditing={handleSearch}
+                        />
+                    </View>
+
+                    <TouchableOpacity
+                        style={[styles.selector, { marginTop: spacing.md }]}
+                        onPress={() => setShowCategoryModal(true)}
+                        activeOpacity={0.7}
+                    >
+                        <View style={[styles.selectorIcon, { backgroundColor: colors.backgroundSecondary }]}>
+                            <IconSymbol
+                                ios_icon_name="square.grid.2x2"
+                                android_material_icon_name="category"
                                 size={22}
                                 color={colors.primary}
                             />
@@ -332,6 +354,23 @@ const styles = StyleSheet.create({
         borderRadius: borderRadius.lg,
         padding: spacing.md,
         gap: spacing.md,
+    },
+    inputWrapper: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.background,
+        borderWidth: 1,
+        borderColor: colors.border,
+        borderRadius: borderRadius.lg,
+        paddingHorizontal: spacing.md,
+        height: 64,
+        gap: spacing.md,
+    },
+    keywordInput: {
+        flex: 1,
+        ...typography.body,
+        fontWeight: '600',
+        height: '100%',
     },
     selectorIcon: {
         width: 44,
