@@ -46,11 +46,11 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.header}>
-            <View style={styles.logoCont}>
-              <IconSymbol ios_icon_name="lock.shield.fill" android_material_icon_name="security" size={40} color={colors.primary} />
+            <View style={styles.logoRow}>
+              <Text style={styles.logoText}>PROFI.UY</Text>
+              <IconSymbol ios_icon_name="star.fill" android_material_icon_name="star" size={28} color={colors.warning} />
             </View>
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>Sign in to your account</Text>
+            <Text style={styles.subtitle}>All specialists in one place</Text>
           </View>
 
           <View style={styles.form}>
@@ -131,23 +131,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.xxl,
   },
-  logoCont: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
+  logoRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    gap: 8,
+    marginBottom: 4,
   },
-  title: {
+  logoText: {
     ...typography.h1,
+    color: colors.primary,
     fontSize: 32,
-    marginBottom: 8,
+    fontWeight: '900',
+    letterSpacing: -1,
   },
   subtitle: {
     ...typography.bodySecondary,
     fontSize: 16,
+    fontWeight: '600',
+    color: colors.textSecondary,
   },
   form: {
     gap: spacing.lg,

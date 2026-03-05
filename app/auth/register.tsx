@@ -49,8 +49,11 @@ export default function RegisterScreen() {
           </TouchableOpacity>
 
           <View style={styles.header}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join HUB SPECIALIST today</Text>
+            <View style={styles.logoRow}>
+              <Text style={styles.logoText}>PROFI.UY</Text>
+              <IconSymbol ios_icon_name="star.fill" android_material_icon_name="star" size={28} color={colors.warning} />
+            </View>
+            <Text style={styles.subtitle}>All specialists in one place</Text>
           </View>
 
           <View style={styles.form}>
@@ -148,16 +151,28 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   header: {
+    alignItems: 'center',
     marginBottom: spacing.xxl,
   },
-  title: {
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  logoText: {
     ...typography.h1,
+    color: colors.primary,
     fontSize: 32,
-    marginBottom: 8,
+    fontWeight: '900',
+    letterSpacing: -1,
   },
   subtitle: {
     ...typography.bodySecondary,
     fontSize: 16,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textAlign: 'center',
   },
   form: {
     gap: spacing.lg,

@@ -3,10 +3,10 @@ import { StyleSheet, ViewStyle, TextStyle } from 'react-native';
 
 // HUB SPECIALIST color palette - professional service marketplace theme
 export const colors = {
-  // Brand Colors (Inspired by profi.ru)
-  primary: '#FA2A48', // Vibrant Pinkish-Red
-  primaryLight: '#FFEBED',
-  primaryDark: '#D91F3D',
+  // Brand Colors (PayPal Blue)
+  primary: '#0070BA', // PayPal Blue
+  primaryLight: '#E6F0F8',
+  primaryDark: '#005EA6',
   secondary: '#1A1A1A', // Deep Black for contrast
 
   // Base Colors
@@ -25,11 +25,11 @@ export const colors = {
   success: '#10B981',
   warning: '#F59E0B',
   error: '#EF4444',
-  info: '#3B82F6',
+  info: '#0070BA',
 
-  // Semantic Categories (using the red strategically)
-  accent: '#FA2A48',
-  highlight: '#FA2A48',
+  // Semantic Categories
+  accent: '#0070BA',
+  highlight: '#0070BA',
 };
 
 export const spacing = {

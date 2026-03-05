@@ -155,8 +155,16 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.banner}>
-          <Text style={styles.greeting}>Profi.uy</Text>
-          <Text style={styles.title}>All specialists{"\n"}in one place</Text>
+          <View style={styles.logoRow}>
+            <Text style={styles.logoText}>PROFI.UY</Text>
+            <IconSymbol
+              ios_icon_name="star.fill"
+              android_material_icon_name="star"
+              size={24}
+              color={colors.warning}
+            />
+          </View>
+          <Text style={styles.slogan}>All specialists in one place</Text>
 
           <TouchableOpacity style={styles.searchBar} onPress={handleSearch} activeOpacity={0.9}>
             <IconSymbol
@@ -322,23 +330,29 @@ const styles = StyleSheet.create({
   banner: {
     paddingTop: spacing.xl,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.sm,
     backgroundColor: colors.background,
   },
-  greeting: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    fontSize: 14,
-    marginBottom: spacing.xs,
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: 4,
   },
-  title: {
+  logoText: {
     ...typography.h1,
-    fontSize: 32,
-    lineHeight: 38,
+    color: colors.primary,
+    fontSize: 36,
+    fontWeight: '900',
+    letterSpacing: -1,
+  },
+  slogan: {
+    ...typography.bodySecondary,
+    fontSize: 16,
+    color: colors.textSecondary,
     marginBottom: spacing.lg,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   searchBar: {
     flexDirection: 'row',

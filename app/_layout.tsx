@@ -22,12 +22,12 @@ const CustomDefaultTheme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    primary: '#FA2A48',
+    primary: '#0070BA',
     background: '#FFFFFF',
     card: '#FFFFFF',
     text: '#121417',
     border: '#EBEFF5',
-    notification: '#FA2A48',
+    notification: '#0070BA',
   },
 };
 
@@ -35,12 +35,12 @@ const CustomDarkTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    primary: '#FA2A48',
+    primary: '#0070BA',
     background: '#121417',
     card: '#1C1C1E',
     text: '#FFFFFF',
     border: '#2C2C2E',
-    notification: '#FA2A48',
+    notification: '#0070BA',
   },
 };
 
