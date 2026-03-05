@@ -252,10 +252,10 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         padding: spacing.xl,
+        paddingTop: spacing.xxl,
     },
     emptyTitle: {
         ...typography.h3,
-        marginTop: spacing.md,
         marginBottom: spacing.sm,
         textAlign: 'center',
     },
