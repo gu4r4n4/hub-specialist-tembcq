@@ -82,8 +82,11 @@ export default function MessagesScreen() {
                     <Text style={styles.title}>Messages</Text>
                 </View>
                 <View style={styles.emptyContainer}>
-                    <IconSymbol ios_icon_name="lock.fill" android_material_icon_name="lock" size={48} color={colors.primary} />
+                    <View style={styles.emptyIconContainer}>
+                        <IconSymbol ios_icon_name="lock.fill" android_material_icon_name="lock" size={48} color={colors.primary} />
+                    </View>
                     <Text style={styles.emptyTitle}>Sign in to view messages</Text>
+                    <Text style={styles.emptyText}>You need to be logged in to chat with specialists and view your conversations.</Text>
                     <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/auth/login')}>
                         <Text style={styles.buttonText}>Sign In</Text>
                     </TouchableOpacity>
@@ -229,6 +232,15 @@ const styles = StyleSheet.create({
         marginBottom: spacing.sm,
         textAlign: 'center',
     },
+    emptyIconContainer: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: colors.primaryLight,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: spacing.lg,
+    },
     emptyText: {
         ...typography.bodySecondary,
         textAlign: 'center',
@@ -237,11 +249,14 @@ const styles = StyleSheet.create({
     primaryButton: {
         backgroundColor: colors.primary,
         paddingVertical: spacing.md,
-        paddingHorizontal: spacing.xl,
+        paddingHorizontal: spacing.xxl,
         borderRadius: borderRadius.md,
+        width: '100%',
+        alignItems: 'center',
     },
     buttonText: {
         color: '#FFF',
+        fontSize: 16,
         fontWeight: '700',
     },
     unreadBadge: {

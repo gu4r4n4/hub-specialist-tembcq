@@ -296,7 +296,7 @@ export default function HomeScreen() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {profile?.role === 'specialist' && (
+      {profile?.role !== 'consumer' && (
         <TouchableOpacity style={styles.fabExtended} onPress={handleAddListing}>
           <IconSymbol
             android_material_icon_name="add"
